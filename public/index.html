@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Live Grand Quiz Championship leaderboard"
+    >
+
+    <title>Grand Quiz Championship</title>
+
+    <link
+        rel="stylesheet"
+        href="/style.css"
+    >
+
+</head>
+
+
+<body>
+
+<main class="dashboard">
+
+    <header class="hero">
+
+        <div class="eyebrow">
+            LIVE • QUIZ CHAMPIONSHIP
+        </div>
+
+        <h1>
+            🏆 Grand Quiz Championship
+        </h1>
+
+        <p>
+            Real-time dynamic standings
+        </p>
+
+        <div class="live-indicator">
+            <span></span>
+            LIVE
+        </div>
+
+    </header>
+
+
+    <section
+        class="current-round"
+        aria-live="polite"
+    >
+
+        <span>
+            CURRENT ROUND
+        </span>
+
+        <strong id="current-round">
+            Loading...
+        </strong>
+
+    </section>
+
+
+    <!-- PODIUM -->
+
+    <section
+        class="podium"
+        aria-label="Top three teams"
+    >
+
+        <div class="podium-card second">
+
+            <div class="medal">
+                🥈
+            </div>
+
+            <div class="podium-rank">
+                2ND
+            </div>
+
+            <div
+                id="second-team"
+                class="podium-team"
+            >
+                —
+            </div>
+
+            <div
+                id="second-score"
+                class="podium-score"
+            >
+                0
+            </div>
+
+            <small>
+                POINTS
+            </small>
+
+        </div>
+
+
+        <div class="podium-card first">
+
+            <div class="crown">
+                👑
+            </div>
+
+            <div class="medal">
+                🥇
+            </div>
+
+            <div class="podium-rank">
+                1ST
+            </div>
+
+            <div
+                id="first-team"
+                class="podium-team"
+            >
+                —
+            </div>
+
+            <div
+                id="first-score"
+                class="podium-score"
+            >
+                0
+            </div>
+
+            <small>
+                POINTS
+            </small>
+
+        </div>
+
+
+        <div class="podium-card third">
+
+            <div class="medal">
+                🥉
+            </div>
+
+            <div class="podium-rank">
+                3RD
+            </div>
+
+            <div
+                id="third-team"
+                class="podium-team"
+            >
+                —
+            </div>
+
+            <div
+                id="third-score"
+                class="podium-score"
+            >
+                0
+            </div>
+
+            <small>
+                POINTS
+            </small>
+
+        </div>
+
+    </section>
+
+
+    <!-- FULL LEADERBOARD -->
+
+    <section class="leaderboard-section">
+
+        <div class="section-heading">
+
+            <div>
+
+                <span class="eyebrow">
+                    CHAMPIONSHIP TABLE
+                </span>
+
+                <h2>
+                    Full Rankings
+                </h2>
+
+            </div>
+
+            <div id="last-updated">
+                Updating...
+            </div>
+
+        </div>
+
+
+        <div
+            id="leaderboard"
+            aria-live="polite"
+        >
+
+            <div class="loading">
+                Loading leaderboard...
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <footer>
+
+        <span>
+            Grand Quiz Championship
+        </span>
+
+        <span>
+            Live Scoreboard
+        </span>
+
+    </footer>
+
+</main>
+
+
+<script src="/app.js"></script>
+
+</body>
+
+</html>
