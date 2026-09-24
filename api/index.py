@@ -20,7 +20,7 @@ TEAMS = [
     "Parda Gate",
     "Salarjung",
     "Purani haweli",
-    "King Kothi",
+    "Lakdikapool",
 ]
 
 ROUNDS = [
