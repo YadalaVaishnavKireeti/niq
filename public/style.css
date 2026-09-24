@@ -60,6 +60,7 @@ button { cursor: pointer; }
 #last-updated { color: var(--muted); font-size: 12px; }
 
 .top-ranking { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.top-ranking.top-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .remaining-ranking { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
 .team-card {
     min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
