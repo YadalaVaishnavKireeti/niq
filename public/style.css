@@ -150,3 +150,90 @@ button { cursor: pointer; }
     .history-actions { grid-column: 1 / -1; }
     .history-actions .small-action { flex: 1; }
 }
+/* =========================
+   LIVE INDICATOR
+========================= */
+
+.live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 14px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    background: #ffe5e5;
+    color: #d60000;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    vertical-align: middle;
+}
+
+.live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #e00000;
+    animation: liveBlink 1s infinite;
+}
+
+@keyframes liveBlink {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.25;
+        transform: scale(0.75);
+    }
+}
+
+@media (max-width: 700px) {
+
+    .live-indicator {
+        margin-left: 8px;
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+
+    .live-dot {
+        width: 7px;
+        height: 7px;
+    }
+
+}
+/* =========================
+   ROUND 4 - TOP 4
+========================= */
+
+.top-four {
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+}
+
+
+/* =========================
+   MEDAL FOR 4TH PLACE
+========================= */
+
+.rank-four-medal {
+    font-size: 42px;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 900px) {
+
+    .top-four {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}

@@ -23,35 +23,121 @@ async function refreshDashboard() {
     }
 }
 
-function renderLeaderboard(data) {
-    const container = document.getElementById("leaderboard");
+function renderLeaderboard(data, currentRound) {
+
+    const container =
+        document.getElementById(
+            "leaderboard"
+        );
+
 
     if (!data.length) {
+
         container.innerHTML = `
             <div class="empty-state">
-                <div>🏁</div>
-                <h3>Quiz hasn't started yet</h3>
-                <p>Scores will appear here as soon as the first round begins.</p>
-            </div>`;
+
+                <div>
+                    🏁
+                </div>
+
+                <h3>
+                    Quiz hasn't started yet
+                </h3>
+
+                <p>
+                    Scores will appear here
+                    as soon as the first round begins.
+                </p>
+
+            </div>
+        `;
+
         return;
     }
 
-    const topCount = currentRound.startsWith("Round 4:") ? 4 : 3;
-    const topTeams = data.slice(0, topCount);
-    const remainingTeams = data.slice(topCount);
+
+    /*
+        ROUND 4:
+        Top 4 teams are displayed in the
+        top ranking row.
+
+        Other rounds:
+        Top 3 teams are displayed in the
+        top ranking row.
+    */
+
+    const isRound4 =
+        currentRound === "Round 4: Buzzer Round";
+
+    const topCount =
+        isRound4 ? 4 : 3;
+
+
+    const topTeams =
+        data.slice(
+            0,
+            topCount
+        );
+
+
+    const remainingTeams =
+        data.slice(
+            topCount
+        );
+
 
     container.innerHTML = `
-        <div class="top-ranking">
-            ${topTeams.map((team, index) => createTeamCard(team, index, true)).join("")}
-        </div>
-        <div class="remaining-ranking">
-            ${remainingTeams.map((team, index) => createTeamCard(team, topCount + index, false)).join("")}
-        </div>`;
 
-    document.getElementById("last-updated").textContent =
-        `Updated ${new Date().toLocaleTimeString([], {
-            hour: "2-digit", minute: "2-digit", second: "2-digit"
-        })}`;
+        <div class="
+            top-ranking
+            ${isRound4 ? "top-four" : "top-three"}
+        ">
+
+            ${topTeams.map(
+                (team, index) =>
+                    createTeamCard(
+                        team,
+                        index,
+                        true
+                    )
+            ).join("")}
+
+        </div>
+
+
+        <div class="
+            remaining-ranking
+            ${isRound4 ? "remaining-six" : "remaining-seven"}
+        ">
+
+            ${remainingTeams.map(
+                (team, index) =>
+                    createTeamCard(
+                        team,
+                        topCount + index,
+                        false
+                    )
+            ).join("")}
+
+        </div>
+
+    `;
+
+
+    document.getElementById(
+        "last-updated"
+    ).textContent =
+        `Updated ${
+            new Date().toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit"
+                }
+            )
+        }`;
+
 }
 
 function createTeamCard(team, index, isTop) {
@@ -60,6 +146,7 @@ function createTeamCard(team, index, isTop) {
         index === 0 ? "🥇" :
         index === 1 ? "🥈" :
         index === 2 ? "🥉" :
+        index === 3 ? "🏅" :
         `#${index + 1}`;
 
     return `
