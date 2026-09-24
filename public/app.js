@@ -1,29 +1,75 @@
 let currentRound = "";
 
 async function refreshDashboard() {
+
     try {
-        const [roundResponse, leaderboardResponse] = await Promise.all([
-            fetch("/api/current-round", { cache: "no-store" }),
-            fetch("/api/leaderboard", { cache: "no-store" }),
+
+        const [
+            leaderboardResponse,
+            roundResponse
+        ] = await Promise.all([
+
+            fetch(
+                "/api/leaderboard",
+                {
+                    cache: "no-store"
+                }
+            ),
+
+            fetch(
+                "/api/current-round",
+                {
+                    cache: "no-store"
+                }
+            )
+
         ]);
 
-        if (roundResponse.ok) {
-            const roundData = await roundResponse.json();
-            currentRound = roundData.round || "";
-            document.getElementById("current-round").textContent = currentRound;
+
+        if (
+            !leaderboardResponse.ok ||
+            !roundResponse.ok
+        ) {
+            throw new Error(
+                "Dashboard update failed."
+            );
         }
 
-        if (!leaderboardResponse.ok) {
-            throw new Error("Leaderboard request failed.");
-        }
 
-        renderLeaderboard(await leaderboardResponse.json());
+        const leaderboard =
+            await leaderboardResponse.json();
+
+        const roundData =
+            await roundResponse.json();
+
+
+        document.getElementById(
+            "current-round"
+        ).textContent =
+            roundData.round;
+
+
+        renderLeaderboard(
+            leaderboard,
+            roundData.round
+        );
+
+
     } catch (error) {
-        console.error("Dashboard update failed:", error);
+
+        console.error(
+            "Dashboard update failed:",
+            error
+        );
+
     }
+
 }
 
-function renderLeaderboard(data, currentRound) {
+function renderLeaderboard(
+    data,
+    currentRound
+) {
 
     const container =
         document.getElementById(
@@ -35,10 +81,7 @@ function renderLeaderboard(data, currentRound) {
 
         container.innerHTML = `
             <div class="empty-state">
-
-                <div>
-                    🏁
-                </div>
+                <div>🏁</div>
 
                 <h3>
                     Quiz hasn't started yet
@@ -48,7 +91,6 @@ function renderLeaderboard(data, currentRound) {
                     Scores will appear here
                     as soon as the first round begins.
                 </p>
-
             </div>
         `;
 
@@ -57,20 +99,20 @@ function renderLeaderboard(data, currentRound) {
 
 
     /*
-        ROUND 4:
-        Top 4 teams are displayed in the
-        top ranking row.
-
-        Other rounds:
-        Top 3 teams are displayed in the
-        top ranking row.
-    */
+     * ROUND 4 = TOP 4
+     * ALL OTHER ROUNDS = TOP 3
+     */
 
     const isRound4 =
-        currentRound === "Round 4: Buzzer Round";
+        currentRound.startsWith(
+            "Round 4:"
+        );
+
 
     const topCount =
-        isRound4 ? 4 : 3;
+        isRound4
+            ? 4
+            : 3;
 
 
     const topTeams =
@@ -88,36 +130,50 @@ function renderLeaderboard(data, currentRound) {
 
     container.innerHTML = `
 
-        <div class="
-            top-ranking
-            ${isRound4 ? "top-four" : "top-three"}
-        ">
+        <div
+            class="
+                top-ranking
+                ${isRound4
+                    ? "top-four"
+                    : "top-three"}
+            "
+        >
 
-            ${topTeams.map(
-                (team, index) =>
-                    createTeamCard(
-                        team,
-                        index,
-                        true
-                    )
-            ).join("")}
+            ${topTeams
+                .map(
+                    (team, index) =>
+                        createTeamCard(
+                            team,
+                            index,
+                            true
+                        )
+                )
+                .join("")
+            }
 
         </div>
 
 
-        <div class="
-            remaining-ranking
-            ${isRound4 ? "remaining-six" : "remaining-seven"}
-        ">
+        <div
+            class="
+                remaining-ranking
+                ${isRound4
+                    ? "remaining-six"
+                    : "remaining-seven"}
+            "
+        >
 
-            ${remainingTeams.map(
-                (team, index) =>
-                    createTeamCard(
-                        team,
-                        topCount + index,
-                        false
-                    )
-            ).join("")}
+            ${remainingTeams
+                .map(
+                    (team, index) =>
+                        createTeamCard(
+                            team,
+                            topCount + index,
+                            false
+                        )
+                )
+                .join("")
+            }
 
         </div>
 

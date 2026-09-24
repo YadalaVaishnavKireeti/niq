@@ -24,11 +24,10 @@ TEAMS = [
 ]
 
 ROUNDS = [
-    "Round 1: Warm Up",
-    "Round 2: Rapid Fire",
-    "Round 3: Visual Round",
-    "Round 4: Buzzer Round",
-    "Round 5: Finale",
+    "ROUND 1: REEL TO REEL",
+    "ROUND 2: NITI KE NUMBERS",
+    "ROUND 3: CONNECT THE DOTS",
+    "ROUND 4: GAME CHANGER"
 ]
 
 
