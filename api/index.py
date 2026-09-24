@@ -11,16 +11,16 @@ from pydantic import BaseModel, Field
 app = FastAPI(title="Quiz Championship API")
 
 TEAMS = [
-    "Alpha Warriors",
-    "Beta Brains",
-    "Gamma Giants",
-    "Delta Digits",
-    "Omega Outlaws",
-    "abc",
-    "def",
-    "ghi",
-    "jkl",
-    "mno",
+    "Golconda",
+    "⁠Charminar",
+    "Chowmahalla",
+    "Barkaas",
+    "Kundanbagh",
+    "⁠Falaknuma",
+    "Parda Gate",
+    "Salarjung",
+    "Purani haweli",
+    "King Kothi",
 ]
 
 ROUNDS = [
