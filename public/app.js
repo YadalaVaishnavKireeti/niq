@@ -105,7 +105,7 @@ function renderLeaderboard(
 
     const isRound4 =
         currentRound.startsWith(
-            "Round 4:"
+            "ROUND 4: GAME CHANGER"
         );
 
 
