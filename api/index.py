@@ -395,12 +395,6 @@ def arm_dashboard_clap():
 
 @app.get("/api/clap/pending")
 def get_pending_clap():
-    """
-    Public endpoint used by the scoreboard screen.
-
-    Only the oldest pending event is returned so repeated dashboard
-    polling does not replay the same clap.
-    """
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -412,16 +406,27 @@ def get_pending_clap():
             """)
             row = cur.fetchone()
 
-    if not row:
-        return {"event": None}
-
-    return {
-        "event": {
-            "id": row[0],
-            "created_at": row[1].isoformat(),
-        }
+    headers = {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0"
     }
 
+    if not row:
+        return JSONResponse(
+            {"event": None},
+            headers=headers
+        )
+
+    return JSONResponse(
+        {
+            "event": {
+                "id": row[0],
+                "created_at": row[1].isoformat()
+            }
+        },
+        headers=headers
+    )
 
 @app.post("/api/clap/complete")
 def complete_clap(payload: ClapComplete):
