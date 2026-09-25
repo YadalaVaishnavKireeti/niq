@@ -11,6 +11,7 @@ let previousLeaderboardSignature = "";
 
 const clapAudio = new Audio("/audio/clap.mp3");
 clapAudio.preload = "auto";
+clapAudio.crossOrigin = "anonymous";
 
 let dashboardSoundEnabled = false;
 let clapPlaying = false;
@@ -23,77 +24,14 @@ let pendingClapEventId = null;
 ========================================================= */
 
 /*
- * Use Web Audio instead of relying on a remote HTMLAudioElement
- * to autoplay. Browsers are much stricter about remote media
- * playback, while an AudioContext explicitly resumed from a
- * real dashboard click can be used later for coordinator-triggered
- * applause.
+ * Use ONE HTMLAudioElement for the whole dashboard.
+ *
+ * The important browser-policy detail is that the audio element is
+ * explicitly played from the real "Enable Sound" click. Once that
+ * media element has been successfully started by the user's gesture,
+ * later coordinator-triggered play() calls on the SAME element are
+ * allowed in normal desktop browsers.
  */
-
-const AudioContextClass =
-    window.AudioContext ||
-    window.webkitAudioContext;
-
-const clapAudioContext =
-    AudioContextClass
-        ? new AudioContextClass()
-        : null;
-
-let clapAudioBuffer = null;
-let clapAudioLoading = null;
-let activeClapSource = null;
-
-
-async function loadClapAudioBuffer() {
-
-    if (clapAudioBuffer) {
-        return clapAudioBuffer;
-    }
-
-    if (clapAudioLoading) {
-        return clapAudioLoading;
-    }
-
-    clapAudioLoading = (async () => {
-
-        const response =
-            await fetch(
-                "/audio/clap.mp3",
-                { cache: "no-store" }
-            );
-
-        if (!response.ok) {
-            throw new Error(
-                `Unable to load clap audio (HTTP ${response.status}).`
-            );
-        }
-
-        const audioData =
-            await response.arrayBuffer();
-
-        if (!clapAudioContext) {
-            throw new Error(
-                "Web Audio is not supported by this browser."
-            );
-        }
-
-        clapAudioBuffer =
-            await clapAudioContext.decodeAudioData(
-                audioData
-            );
-
-        return clapAudioBuffer;
-
-    })();
-
-    try {
-        return await clapAudioLoading;
-    } finally {
-        clapAudioLoading = null;
-    }
-}
-
-
 function setupDashboardSound() {
 
     const button =
@@ -115,22 +53,27 @@ function setupDashboardSound() {
 
             try {
 
-                if (!clapAudioContext) {
-                    throw new Error(
-                        "This browser does not support Web Audio."
-                    );
-                }
+                clapAudio.load();
 
                 /*
-                 * Resume MUST happen from this user gesture.
+                 * Start the SAME audio element from the user gesture,
+                 * but muted and immediately pause it. This is the
+                 * browser unlock step; it does not play the clap to
+                 * the audience.
                  */
-                await clapAudioContext.resume();
+                const originalVolume = clapAudio.volume;
+                const originalMuted = clapAudio.muted;
 
-                /*
-                 * Decode the actual MP3 now, while the page has
-                 * an explicit user interaction.
-                 */
-                await loadClapAudioBuffer();
+                clapAudio.muted = true;
+                clapAudio.volume = 0;
+                clapAudio.currentTime = 0;
+
+                await clapAudio.play();
+                clapAudio.pause();
+                clapAudio.currentTime = 0;
+
+                clapAudio.muted = originalMuted;
+                clapAudio.volume = originalVolume;
 
                 dashboardSoundEnabled = true;
 
@@ -153,7 +96,7 @@ function setupDashboardSound() {
                 }, 1200);
 
                 console.log(
-                    "Dashboard sound is ready for remote applause."
+                    "Dashboard sound unlocked successfully."
                 );
 
             } catch (error) {
@@ -193,51 +136,58 @@ async function playRemoteClap(eventId) {
     clapPlaying = true;
     pendingClapEventId = eventId;
 
-    let source = null;
-
     try {
 
-        if (!clapAudioContext) {
-            throw new Error(
-                "Web Audio is not supported."
-            );
-        }
-
         /*
-         * The browser may suspend an AudioContext after a while,
-         * so resume it before every remote clap as an extra guard.
+         * Reuse the EXACT audio element that was unlocked by the
+         * dashboard user's click. Do not create a new media element
+         * here, because that can re-trigger autoplay restrictions.
          */
-        await clapAudioContext.resume();
+        clapAudio.pause();
+        clapAudio.currentTime = 0;
 
-        const buffer =
-            await loadClapAudioBuffer();
+        await clapAudio.play();
 
-        source =
-            clapAudioContext.createBufferSource();
-
-        source.buffer = buffer;
-        source.connect(
-            clapAudioContext.destination
-        );
-
-        activeClapSource = source;
-
-        /*
-         * The coordinator is released only when the dashboard
-         * AudioBufferSourceNode actually reaches its end.
-         */
         await new Promise((resolve, reject) => {
 
-            source.onended = resolve;
+            let settled = false;
 
-            try {
-                source.start(0);
-            } catch (error) {
-                reject(error);
+            const cleanup = () => {
+                clapAudio.removeEventListener("ended", onEnded);
+                clapAudio.removeEventListener("error", onError);
+            };
+
+            const onEnded = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve();
+            };
+
+            const onError = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(
+                    new Error(
+                        "The clap audio element reported a playback error."
+                    )
+                );
+            };
+
+            clapAudio.addEventListener("ended", onEnded);
+            clapAudio.addEventListener("error", onError);
+
+            /*
+             * If a very short/edge-case media event has already fired,
+             * don't leave the coordinator waiting forever.
+             */
+            if (clapAudio.ended) {
+                onEnded();
             }
         });
 
-        await fetch(
+        const completeResponse = await fetch(
             "/api/clap/complete",
             {
                 method: "POST",
@@ -251,7 +201,17 @@ async function playRemoteClap(eventId) {
             }
         );
 
+        if (!completeResponse.ok) {
+            throw new Error(
+                `Clap completion failed (HTTP ${completeResponse.status}).`
+            );
+        }
+
         lastCompletedClapId = eventId;
+
+        console.log(
+            `Remote clap ${eventId} played and acknowledged.`
+        );
 
     } catch (error) {
 
@@ -260,13 +220,14 @@ async function playRemoteClap(eventId) {
             error
         );
 
+        /*
+         * Leave the DB event pending so the next poll can retry it.
+         * This is intentional: a failed playback must never be
+         * reported to the coordinator as successfully completed.
+         */
+
     } finally {
 
-        if (source) {
-            source.onended = null;
-        }
-
-        activeClapSource = null;
         clapPlaying = false;
         pendingClapEventId = null;
     }
