@@ -206,27 +206,48 @@ async function playRemoteClap(eventId) {
             }
         });
 
-        const completeResponse = await fetch(
-            "/api/clap/complete",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ event_id: eventId }),
-                cache: "no-store"
-            }
-        );
+        let completed = false;
+        let lastCompletionError = null;
 
-        if (!completeResponse.ok) {
-            const detail = await completeResponse.text().catch(() => "");
-            throw new Error(
-                `Clap completion failed (HTTP ${completeResponse.status}) ${detail}`
-            );
+        // Never replay an event just because acknowledgement is delayed.
+        // The event is already in `playing` state on the server. Retry only
+        // the completion request after the sound has ended.
+        for (let attempt = 1; attempt <= 8 && !completed; attempt++) {
+            try {
+                const completeResponse = await fetch(
+                    "/api/clap/complete?v=9",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ event_id: eventId }),
+                        cache: "no-store"
+                    }
+                );
+
+                if (completeResponse.ok) {
+                    completed = true;
+                    break;
+                }
+
+                const detail = await completeResponse.text().catch(() => "");
+                lastCompletionError = new Error(
+                    `Clap completion failed (HTTP ${completeResponse.status}) ${detail}`
+                );
+            } catch (error) {
+                lastCompletionError = error;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (!completed) {
+            throw lastCompletionError || new Error("Clap completion failed.");
         }
 
         completedClapIds.add(eventId);
-        console.log(`Remote clap ${eventId} played once and acknowledged.`);
+        console.log(`Remote clap ${eventId} played exactly once and was acknowledged.`);
 
     } catch (error) {
 
@@ -261,7 +282,7 @@ async function checkForClap() {
         const response = await fetch(
             "/api/clap/pending?after=" +
                 encodeURIComponent(dashboardSoundArmedAt) +
-                "&v=8",
+                "&v=9",
             { cache: "no-store" }
         );
 
@@ -278,10 +299,12 @@ async function checkForClap() {
 
         const eventId = Number(event.id);
 
-        if (!eventId) {
+        if (!eventId || completedClapIds.has(eventId)) {
             return;
         }
 
+        // The server has already atomically changed this event from
+        // pending -> playing. It can never be claimed a second time.
         await playRemoteClap(eventId);
 
     } catch (error) {

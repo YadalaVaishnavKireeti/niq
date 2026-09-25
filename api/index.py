@@ -382,19 +382,15 @@ def get_pending_clap(after: str | None = Query(default=None)):
                 except ValueError:
                     raise HTTPException(status_code=400, detail="Invalid clap timestamp.")
 
+                # IMPORTANT: only pending events are ever claimable.
+                # Once an event becomes `playing`, it is never returned again.
+                # This makes a 9-second clap impossible to replay in a loop.
                 cur.execute("""
                     WITH candidate AS (
                         SELECT id
                         FROM clap_events
-                        WHERE (
-                                status = 'pending'
-                                AND created_at > %s::timestamptz
-                              )
-                           OR (
-                                status = 'playing'
-                                AND created_at > %s::timestamptz
-                                AND created_at < NOW() - INTERVAL '30 seconds'
-                              )
+                        WHERE status = 'pending'
+                          AND created_at > %s::timestamptz
                         ORDER BY created_at ASC, id ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
@@ -404,14 +400,13 @@ def get_pending_clap(after: str | None = Query(default=None)):
                     FROM candidate c
                     WHERE e.id = c.id
                     RETURNING e.id, e.created_at
-                """, (after, after))
+                """, (after,))
             else:
                 cur.execute("""
                     WITH candidate AS (
                         SELECT id
                         FROM clap_events
                         WHERE status = 'pending'
-                           OR (status = 'playing' AND created_at < NOW() - INTERVAL '30 seconds')
                         ORDER BY created_at ASC, id ASC
                         LIMIT 1
                         FOR UPDATE SKIP LOCKED
@@ -444,10 +439,10 @@ def complete_clap(payload: ClapComplete):
             cur.execute("""
                 UPDATE clap_events
                 SET status = 'completed',
-                    completed_at = NOW()
+                    completed_at = COALESCE(completed_at, NOW())
                 WHERE id = %s
-                  AND status = 'playing'
-                RETURNING id, completed_at
+                  AND status IN ('playing', 'completed')
+                RETURNING id, completed_at, status
             """, (payload.event_id,))
             row = cur.fetchone()
         conn.commit()
@@ -461,7 +456,7 @@ def complete_clap(payload: ClapComplete):
     return {
         "success": True,
         "event_id": row[0],
-        "status": "completed",
+        "status": row[2],
         "completed_at": row[1].isoformat(),
     }
 
