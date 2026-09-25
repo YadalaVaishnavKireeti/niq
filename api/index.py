@@ -1,9 +1,10 @@
 from io import BytesIO
+from datetime import datetime
 import os
 import secrets
 
 import psycopg
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
@@ -364,52 +365,36 @@ def trigger_clap(x_coordinator_pin: str | None = Header(default=None)):
     }
 
 
-@app.post("/api/clap/arm")
-def arm_dashboard_clap():
-    """
-    Arm a dashboard for a new contest session.
-
-    Any pending clap events that existed before the dashboard sound
-    was manually enabled are stale and are discarded. The returned
-    baseline_id becomes the first valid event boundary for this session.
-    This endpoint deliberately requires no coordinator PIN because it is
-    called by the public scoreboard from its explicit user gesture.
-    """
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE clap_events
-                SET status = 'discarded',
-                    completed_at = NOW()
-                WHERE status = 'pending'
-            """)
-            cur.execute("SELECT COALESCE(MAX(id), 0) FROM clap_events")
-            baseline_id = int(cur.fetchone()[0])
-        conn.commit()
-
-    return {
-        "success": True,
-        "baseline_id": baseline_id,
-    }
-
-
 @app.get("/api/clap/pending")
-def get_pending_clap():
-    """
-    Public endpoint used by the scoreboard screen.
+def get_pending_clap(after: str | None = Query(default=None)):
+    """Return the oldest pending clap created after the dashboard was armed.
 
-    Only the oldest pending event is returned so repeated dashboard
-    polling does not replay the same clap.
+    The dashboard supplies its arm timestamp. This prevents stale pending
+    events from ever blocking a newly enabled scoreboard.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, created_at
-                FROM clap_events
-                WHERE status = 'pending'
-                ORDER BY created_at ASC, id ASC
-                LIMIT 1
-            """)
+            if after:
+                try:
+                    datetime.fromisoformat(after.replace("Z", "+00:00"))
+                except ValueError:
+                    raise HTTPException(status_code=400, detail="Invalid clap timestamp.")
+                cur.execute("""
+                    SELECT id, created_at
+                    FROM clap_events
+                    WHERE status = 'pending'
+                      AND created_at > %s::timestamptz
+                    ORDER BY created_at ASC, id ASC
+                    LIMIT 1
+                """, (after,))
+            else:
+                cur.execute("""
+                    SELECT id, created_at
+                    FROM clap_events
+                    WHERE status = 'pending'
+                    ORDER BY created_at ASC, id ASC
+                    LIMIT 1
+                """)
             row = cur.fetchone()
 
     if not row:
@@ -421,7 +406,6 @@ def get_pending_clap():
             "created_at": row[1].isoformat(),
         }
     }
-
 
 @app.post("/api/clap/complete")
 def complete_clap(payload: ClapComplete):

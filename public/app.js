@@ -20,9 +20,8 @@ let clapAudioLoading = null;
 
 let dashboardSoundEnabled = false;
 let clapPlaying = false;
-let lastCompletedClapId = 0;
-let armedClapBaselineId = 0;
 let pendingClapEventId = null;
+let dashboardSoundArmedAt = null;
 
 
 /* =========================================================
@@ -44,7 +43,7 @@ async function loadClapBuffer() {
     }
 
     clapAudioLoading = fetch(
-        "/audio/clap.mp3?audio=v6",
+        "/audio/clap.mp3?audio=v7",
         { cache: "no-store" }
     )
         .then(async (response) => {
@@ -93,6 +92,14 @@ function setupDashboardSound() {
             return;
         }
 
+        /*
+         * This timestamp is the ONLY event boundary we use.
+         * There is deliberately no database/API call in the enable step.
+         * Therefore enabling sound can never fail because of PostgreSQL,
+         * Vercel cold starts, or a stale clap event.
+         */
+        const armTime = new Date().toISOString();
+
         button.disabled = true;
         button.textContent = "⏳ Preparing Sound...";
 
@@ -104,45 +111,20 @@ function setupDashboardSound() {
                 );
             }
 
-            /*
-             * This resume() happens directly inside the user's click.
-             * That is the browser's required user-gesture unlock.
-             */
+            /* This is executed directly from the real user click. */
             await clapAudioContext.resume();
 
             /*
-             * Decode the REAL clap file before enabling the dashboard.
-             * No sound is started here.
+             * Decode the real clap file now, but NEVER start it here.
+             * This proves the file is usable without producing any sound.
              */
             await loadClapBuffer();
 
             /*
-             * Establish the event boundary only after audio is fully
-             * ready. Events that existed before this point are stale.
+             * Sound is now armed. Only coordinator events created after
+             * this exact moment are eligible for playback.
              */
-            const armResponse = await fetch(
-                "/api/clap/arm?v=6",
-                {
-                    method: "POST",
-                    cache: "no-store"
-                }
-            );
-
-            if (!armResponse.ok) {
-                const body = await armResponse.text();
-                throw new Error(
-                    `Dashboard sound could not connect to the clap service (HTTP ${armResponse.status}). ${body}`
-                );
-            }
-
-            const armData = await armResponse.json();
-
-            armedClapBaselineId =
-                Number(armData.baseline_id) || 0;
-
-            lastCompletedClapId =
-                armedClapBaselineId;
-
+            dashboardSoundArmedAt = armTime;
             dashboardSoundEnabled = true;
 
             button.textContent = "🔊 Sound Ready";
@@ -157,18 +139,17 @@ function setupDashboardSound() {
             }, 1500);
 
             console.log(
-                `Dashboard sound ready. Clap baseline: ${armedClapBaselineId}`
+                `Dashboard sound ready. Ignoring clap events created before ${dashboardSoundArmedAt}.`
             );
 
         } catch (error) {
 
             dashboardSoundEnabled = false;
+            dashboardSoundArmedAt = null;
             showSoundError(
                 button,
                 `Dashboard sound setup failed: ${error.message || error}`
             );
-
-            /* Keep the button usable so the operator can try again. */
         }
     });
 }
@@ -196,10 +177,6 @@ async function playRemoteClap(eventId) {
 
     try {
 
-        /*
-         * The AudioContext was resumed by the explicit dashboard click.
-         * Do NOT create another context and do NOT use HTMLAudioElement.
-         */
         if (clapAudioContext.state !== "running") {
             await clapAudioContext.resume();
         }
@@ -209,7 +186,6 @@ async function playRemoteClap(eventId) {
         source.connect(clapAudioContext.destination);
 
         await new Promise((resolve, reject) => {
-
             let settled = false;
 
             source.onended = () => {
@@ -245,24 +221,11 @@ async function playRemoteClap(eventId) {
             );
         }
 
-        lastCompletedClapId = eventId;
-
-        console.log(
-            `Remote clap ${eventId} played and acknowledged.`
-        );
+        console.log(`Remote clap ${eventId} played and acknowledged.`);
 
     } catch (error) {
 
-        console.error(
-            "Remote clap could not be played:",
-            error
-        );
-
-        /*
-         * Do NOT complete the DB event if playback failed. The event stays
-         * pending, but the next poll is throttled until the current attempt
-         * is released below. A later poll can retry it.
-         */
+        console.error("Remote clap could not be played:", error);
 
     } finally {
 
@@ -284,14 +247,16 @@ async function playRemoteClap(eventId) {
 
 async function checkForClap() {
 
-    if (!dashboardSoundEnabled || clapPlaying) {
+    if (!dashboardSoundEnabled || clapPlaying || !dashboardSoundArmedAt) {
         return;
     }
 
     try {
 
         const response = await fetch(
-            "/api/clap/pending?v=6",
+            "/api/clap/pending?after=" +
+                encodeURIComponent(dashboardSoundArmedAt) +
+                "&v=7",
             { cache: "no-store" }
         );
 
@@ -308,11 +273,7 @@ async function checkForClap() {
 
         const eventId = Number(event.id);
 
-        if (
-            !eventId ||
-            eventId <= armedClapBaselineId ||
-            eventId <= lastCompletedClapId
-        ) {
+        if (!eventId) {
             return;
         }
 
