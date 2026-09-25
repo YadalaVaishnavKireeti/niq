@@ -1,5 +1,5 @@
 :root {
-    --bg: #f4f6f8;
+    --bg: #b42318;
     --panel: #ffffff;
     --border: #d8dee6;
     --text: #17202a;
@@ -22,6 +22,7 @@ body {
     min-height: 100vh;
     background: var(--bg);
     color: var(--text);
+
     font-family:
         Inter,
         system-ui,
@@ -67,39 +68,73 @@ button {
 
 .scoreboard-header {
     width: 100%;
+
     display: flex;
     align-items: center;
     justify-content: space-between;
+
     gap: 30px;
+
     padding: 15px 10px 25px;
+
     background: #ffffff;
     color: var(--text);
+
     border-bottom: 1px solid var(--border);
 }
 
 .scoreboard-header h1 {
     flex: 1;
+
     margin: 0;
+
     text-align: center;
-    font-size: clamp(28px, 4vw, 48px);
+
+    font-size:
+        clamp(
+            28px,
+            4vw,
+            48px
+        );
+
     font-weight: 900;
+
     letter-spacing: 1px;
+
     color: var(--text);
 }
 
+
+/* =========================================================
+   LOGOS
+========================================================= */
+
 .logo-placeholder {
-    width: 110px;
-    height: 80px;
-    border: 2px dashed #7f8c8d;
-    border-radius: 10px;
+    width: 150px;
+    height: 110px;
+
+    border: none;
+    border-radius: 0;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    font-weight: 700;
+
     flex-shrink: 0;
-    color: var(--text);
-    background: #f8fafc;
+
+    color: transparent;
+    background: transparent;
+
+    overflow: hidden;
+}
+
+.logo-placeholder img {
+    width: 100%;
+    height: 100%;
+
+    object-fit: contain;
+
+    display: block;
 }
 
 
@@ -109,23 +144,35 @@ button {
 
 .current-round {
     display: flex;
+
     justify-content: center;
     align-items: center;
+
     gap: 12px;
+
     margin: 22px auto 28px;
+
     width: fit-content;
     max-width: 100%;
+
     padding: 10px 20px;
+
     border: 1px solid var(--border);
     border-radius: 12px;
+
     background: #ffffff;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, .05);
+
+    box-shadow:
+        0 3px 12px rgba(0, 0, 0, .05);
 }
 
 .current-round span {
     color: var(--muted);
+
     font-size: 11px;
+
     font-weight: 800;
+
     letter-spacing: 1.5px;
 }
 
@@ -140,28 +187,44 @@ button {
 
 .live-indicator {
     display: inline-flex;
+
     align-items: center;
+
     gap: 8px;
+
     margin-left: 8px;
+
     padding: 7px 14px;
+
     border-radius: 20px;
+
     background: #ffe5e5;
+
     color: #d60000 !important;
+
     font-size: 14px !important;
+
     font-weight: 900 !important;
+
     letter-spacing: 1px !important;
+
     white-space: nowrap;
 }
 
 .live-dot {
     width: 9px;
     height: 9px;
+
     border-radius: 50%;
+
     background: #e00000;
-    animation: liveBlink 1s infinite;
+
+    animation:
+        liveBlink 1s infinite;
 }
 
 @keyframes liveBlink {
+
     0%,
     100% {
         opacity: 1;
@@ -169,9 +232,10 @@ button {
     }
 
     50% {
-        opacity: 0.25;
-        transform: scale(0.75);
+        opacity: .25;
+        transform: scale(.75);
     }
+
 }
 
 
@@ -185,101 +249,139 @@ button {
 
 .section-heading {
     display: flex;
+
     justify-content: space-between;
     align-items: end;
+
     gap: 20px;
+
     margin-bottom: 18px;
 }
 
 .section-heading h2 {
     margin: 5px 0 0;
+
     font-size: 28px;
 }
 
 .eyebrow {
     color: var(--blue);
+
     font-size: 12px;
+
     font-weight: 800;
+
     letter-spacing: 3px;
+
     text-transform: uppercase;
 }
 
 #last-updated {
     color: var(--muted);
+
     font-size: 12px;
 }
 
 
 /* =========================================================
-   TOP 3
-   ROUNDS 1, 2, 3 AND 5
+   LEADERBOARD CONTAINER
 ========================================================= */
 
-.top-ranking {
+#leaderboard {
     width: 100%;
+}
+
+
+/* =========================================================
+   LEADERBOARD ROWS
+========================================================= */
+
+.leaderboard-row {
+    width: 100%;
+
     display: grid;
+
+    gap: 14px;
+
+    margin-bottom: 14px;
+}
+
+
+/* =========================================================
+   ROUNDS 1, 2, 3
+   ROW 1 = 3 TEAMS
+========================================================= */
+
+.leaderboard-top-row.round-one-three-row {
     grid-template-columns:
-        repeat(3, minmax(0, 1fr));
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
     gap: 20px;
-    margin-bottom: 24px;
+
+    margin-bottom: 20px;
 }
 
 
 /* =========================================================
    ROUND 4
-   TOP 4 IN ONE SINGLE ROW
+   ROW 1 = 4 TEAMS
 ========================================================= */
 
-.top-ranking.top-four {
-    width: 100%;
-    display: grid;
+.leaderboard-top-row.round-four-row {
     grid-template-columns:
-        repeat(4, minmax(0, 1fr)) !important;
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
+
     gap: 20px;
-    margin-bottom: 24px;
-}
 
-
-/*
-   Make sure the four top cards stay equal width.
-*/
-
-.top-ranking.top-four .team-card {
-    width: 100%;
-    min-width: 0;
+    margin-bottom: 20px;
 }
 
 
 /* =========================================================
-   REMAINING TEAMS
+   ROW 2
+   ALL ROUNDS = 4 TEAMS
 ========================================================= */
 
-.remaining-ranking {
-    width: 100%;
-    display: grid;
+.leaderboard-four-row {
     grid-template-columns:
-        repeat(7, minmax(0, 1fr));
-    gap: 10px;
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
 }
 
 
-/*
-   Round 4 has six remaining teams.
-*/
+/* =========================================================
+   ROUNDS 1, 2, 3
+   ROW 3 = 4 TEAMS
+========================================================= */
 
-.remaining-ranking.remaining-six {
+.leaderboard-bottom-row.round-one-three-bottom-row {
     grid-template-columns:
-        repeat(6, minmax(0, 1fr));
+        repeat(
+            4,
+            minmax(0, 1fr)
+        );
 }
 
 
-/*
-   Rounds with seven remaining teams.
-*/
+/* =========================================================
+   ROUND 4
+   ROW 3 = 3 TEAMS
+========================================================= */
 
-.remaining-ranking.remaining-seven {
+.leaderboard-bottom-row.round-four-bottom-row {
     grid-template-columns:
-        repeat(7, minmax(0, 1fr));
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
 }
 
 
@@ -289,24 +391,44 @@ button {
 
 .team-card {
     min-width: 0;
+
+    width: 100%;
+
     display: flex;
+
     flex-direction: column;
+
     align-items: center;
+
     justify-content: center;
+
     text-align: center;
+
     color: #17202a;
-    border: 2px solid rgba(0, 0, 0, .08);
+
+    border:
+        2px solid
+        rgba(0, 0, 0, .08);
+
     border-radius: 16px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, .10);
+
+    box-shadow:
+        0 5px 15px
+        rgba(0, 0, 0, .10);
+
     transition:
         transform .2s ease,
         box-shadow .2s ease;
+
     overflow: hidden;
 }
 
 .team-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 9px 20px rgba(0, 0, 0, .14);
+
+    box-shadow:
+        0 9px 20px
+        rgba(0, 0, 0, .14);
 }
 
 
@@ -316,6 +438,7 @@ button {
 
 .top-team-card {
     min-height: 205px;
+
     padding: 22px 12px;
 }
 
@@ -326,48 +449,25 @@ button {
 
 .remaining-team-card {
     min-height: 135px;
+
     padding: 14px 8px;
 }
 
 
 /* =========================================================
-   MEDALS
-========================================================= */
-
-.team-medal {
-    font-size: 42px;
-    line-height: 1;
-    margin-bottom: 8px;
-}
-
-.top-team-card .team-medal {
-    font-size: 44px;
-}
-
-
-/*
-   Specific 4th-place medal styling.
-*/
-
-.rank-four-medal {
-    font-size: 44px;
-    line-height: 1;
-    margin-bottom: 8px;
-}
-
-
-/* =========================================================
-   RANK
+   RANK / MEDALS
 ========================================================= */
 
 .team-rank {
     font-size: 25px;
+
     font-weight: 900;
+
     margin-bottom: 8px;
 }
 
 .top-team-card .team-rank {
-    font-size: 30px;
+    font-size: 34px;
 }
 
 
@@ -377,8 +477,11 @@ button {
 
 .team-name {
     font-size: 18px;
+
     font-weight: 800;
+
     line-height: 1.15;
+
     overflow-wrap: anywhere;
 }
 
@@ -393,7 +496,9 @@ button {
 
 .team-score {
     margin-top: 9px;
+
     font-size: 32px;
+
     font-weight: 900;
 }
 
@@ -403,6 +508,7 @@ button {
 
 .team-score span {
     font-size: 9px;
+
     letter-spacing: 1px;
 }
 
@@ -451,6 +557,10 @@ button {
     background: #e5e5e5;
 }
 
+.team-colour-11 {
+    background: #d8f0ff;
+}
+
 
 /* =========================================================
    EMPTY / LOADING
@@ -458,14 +568,21 @@ button {
 
 .empty-state {
     padding: 55px 20px;
+
     text-align: center;
-    border: 1px dashed var(--border);
+
+    border:
+        1px dashed
+        var(--border);
+
     border-radius: 18px;
+
     background: #ffffff;
 }
 
 .empty-state div {
     font-size: 45px;
+
     margin-bottom: 10px;
 }
 
@@ -475,12 +592,15 @@ button {
 
 .empty-state p {
     margin: 0;
+
     color: var(--muted);
 }
 
 .loading {
     text-align: center;
+
     padding: 25px;
+
     color: var(--muted);
 }
 
@@ -490,19 +610,32 @@ button {
 ========================================================= */
 
 .coordinator-page {
-    width: min(1100px, calc(100% - 30px));
+    width:
+        min(
+            1100px,
+            calc(100% - 30px)
+        );
+
     margin: auto;
+
     padding: 35px 0 50px;
 }
 
 .coordinator-header {
     text-align: center;
+
     margin-bottom: 30px;
 }
 
 .coordinator-header h1 {
     margin: 10px 0;
-    font-size: clamp(30px, 6vw, 48px);
+
+    font-size:
+        clamp(
+            30px,
+            6vw,
+            48px
+        );
 }
 
 .coordinator-header p {
@@ -516,11 +649,20 @@ button {
 
 .control-card {
     padding: 28px;
+
     margin-bottom: 20px;
+
     background: #ffffff;
-    border: 1px solid var(--border);
+
+    border:
+        1px solid
+        var(--border);
+
     border-radius: 18px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, .07);
+
+    box-shadow:
+        0 8px 25px
+        rgba(0, 0, 0, .07);
 }
 
 .control-card h2 {
@@ -529,37 +671,59 @@ button {
 
 .control-card label {
     display: block;
+
     margin: 18px 0 7px;
+
     color: var(--muted);
+
     font-size: 13px;
+
     font-weight: 700;
 }
 
 .control-card input,
 .control-card select {
     width: 100%;
+
     padding: 13px 14px;
-    border: 1px solid var(--border);
+
+    border:
+        1px solid
+        var(--border);
+
     border-radius: 10px;
+
     outline: none;
+
     background: #ffffff;
+
     color: var(--text);
 }
 
 .control-card input:focus,
 .control-card select:focus {
     border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(36, 104, 177, .12);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(36, 104, 177, .12);
 }
 
 .control-card button {
     width: 100%;
+
     margin-top: 22px;
+
     padding: 14px;
+
     border: 0;
+
     border-radius: 10px;
+
     background: var(--blue);
+
     color: #ffffff;
+
     font-weight: 900;
 }
 
@@ -569,6 +733,7 @@ button {
 
 .control-card button:disabled {
     opacity: .6;
+
     cursor: wait;
 }
 
@@ -579,18 +744,28 @@ button {
 
 .console-top {
     display: flex;
+
     justify-content: space-between;
+
     gap: 20px;
 }
 
 .console-top .secondary-button {
     width: auto;
+
     height: fit-content;
+
     margin-top: 0;
+
     padding: 10px 16px;
+
     background: #eef2f6;
+
     color: var(--text);
-    border: 1px solid var(--border);
+
+    border:
+        1px solid
+        var(--border);
 }
 
 
@@ -600,25 +775,38 @@ button {
 
 .message {
     margin-top: 15px;
+
     padding: 10px;
+
     border-radius: 8px;
+
     color: var(--green);
+
     font-size: 13px;
 }
 
 .live-round-note {
     margin-top: 15px;
+
     padding: 11px 13px;
+
     border-radius: 9px;
+
     background: #eef5ff;
+
     color: #36536f;
+
     font-size: 13px;
 }
 
 .divider {
     margin: 28px 0;
+
     border: 0;
-    border-top: 1px solid var(--border);
+
+    border-top:
+        1px solid
+        var(--border);
 }
 
 
@@ -628,7 +816,10 @@ button {
 
 .score-action-buttons {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+
+    grid-template-columns:
+        1fr 1fr;
+
     gap: 12px;
 }
 
@@ -637,11 +828,13 @@ button {
 }
 
 .add-button {
-    background: #17834b !important;
+    background:
+        #17834b !important;
 }
 
 .subtract-button {
-    background: #b42318 !important;
+    background:
+        #b42318 !important;
 }
 
 
@@ -651,19 +844,33 @@ button {
 
 .team-totals-grid {
     display: grid;
+
     grid-template-columns:
-        repeat(2, minmax(0, 1fr));
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
     gap: 12px;
 }
 
 .total-team-card {
     display: grid;
-    grid-template-columns: 1fr auto;
+
+    grid-template-columns:
+        1fr auto;
+
     align-items: center;
+
     column-gap: 10px;
+
     padding: 15px;
+
     border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, .10);
+
+    border:
+        1px solid
+        rgba(0, 0, 0, .10);
 }
 
 .total-team-card span {
@@ -676,9 +883,13 @@ button {
 
 .total-team-card small {
     grid-column: 1 / -1;
+
     color: #596575;
+
     font-size: 9px;
+
     letter-spacing: 1px;
+
     margin-top: 3px;
 }
 
@@ -727,6 +938,10 @@ button {
     background: #e5e5e5;
 }
 
+.total-colour-11 {
+    background: #d8f0ff;
+}
+
 
 /* =========================================================
    SCORE HISTORY
@@ -734,28 +949,40 @@ button {
 
 .entry-row {
     display: grid;
+
     grid-template-columns:
         1fr auto auto;
+
     align-items: center;
+
     gap: 15px;
+
     padding: 13px 0;
-    border-bottom: 1px solid var(--border);
+
+    border-bottom:
+        1px solid
+        var(--border);
 }
 
 .history-main {
     display: flex;
+
     flex-direction: column;
+
     gap: 3px;
 }
 
 .entry-row span {
     color: var(--muted);
+
     font-size: 12px;
 }
 
 .entry-score {
     color: var(--green);
+
     white-space: nowrap;
+
     font-size: 18px;
 }
 
@@ -770,21 +997,87 @@ button {
 
 .history-actions {
     display: flex;
+
     gap: 7px;
 }
 
 .history-actions .small-action {
     width: auto;
+
     margin: 0;
+
     padding: 7px 9px;
+
     font-size: 11px;
+
     background: #eef2f6;
+
     color: var(--text);
-    border: 1px solid var(--border);
+
+    border:
+        1px solid
+        var(--border);
 }
 
 .history-actions .delete-action {
     color: var(--red);
+}
+
+
+/* =========================================================
+   CLAPPING AUDIO CONTROL
+========================================================= */
+
+.audio-control-card {
+    padding: 22px 28px;
+}
+
+.audio-control-content {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 25px;
+}
+
+.audio-control-content h2 {
+    margin: 6px 0 5px;
+}
+
+.audio-control-content p {
+    margin: 0;
+}
+
+.clap-toggle-button {
+    width: auto !important;
+
+    min-width: 180px;
+
+    margin-top: 0 !important;
+
+    padding: 13px 20px !important;
+
+    border-radius: 12px !important;
+
+    background:
+        #17834b !important;
+
+    color: #ffffff !important;
+
+    font-weight: 900 !important;
+
+    border: none !important;
+}
+
+.clap-toggle-button.clap-disabled {
+    background:
+        #647180 !important;
+}
+
+.clap-toggle-button:hover {
+    filter: brightness(1.06);
 }
 
 
@@ -795,27 +1088,48 @@ button {
 @media (max-width: 1100px) {
 
     /*
-       Keep Round 4 TOP 4 in one row
-       while there is still enough width.
-    */
+     * Keep the requested row structures
+     * while there is sufficient width.
+     */
 
-    .top-ranking.top-four {
+    .leaderboard-top-row.round-one-three-row {
         grid-template-columns:
-            repeat(4, minmax(0, 1fr)) !important;
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
     }
 
-    /*
-       Remaining teams can wrap at tablet width.
-    */
-
-    .remaining-ranking.remaining-seven {
+    .leaderboard-top-row.round-four-row {
         grid-template-columns:
-            repeat(4, minmax(0, 1fr));
+            repeat(
+                4,
+                minmax(0, 1fr)
+            );
     }
 
-    .remaining-ranking.remaining-six {
+    .leaderboard-four-row {
         grid-template-columns:
-            repeat(3, minmax(0, 1fr));
+            repeat(
+                4,
+                minmax(0, 1fr)
+            );
+    }
+
+    .leaderboard-bottom-row.round-one-three-bottom-row {
+        grid-template-columns:
+            repeat(
+                4,
+                minmax(0, 1fr)
+            );
+    }
+
+    .leaderboard-bottom-row.round-four-bottom-row {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
     }
 
 }
@@ -828,13 +1142,20 @@ button {
 @media (max-width: 700px) {
 
     .dashboard {
-        width: calc(100% - 20px);
+        width:
+            calc(100% - 20px);
+
         padding-top: 15px;
     }
 
 
+    /* -----------------------------------------------------
+       HEADER
+    ----------------------------------------------------- */
+
     .scoreboard-header {
         padding: 12px 0 18px;
+
         gap: 10px;
     }
 
@@ -845,50 +1166,74 @@ button {
 
 
     .logo-placeholder {
-        width: 65px;
-        height: 52px;
-        font-size: 10px;
+        width: 85px;
+
+        height: 65px;
     }
 
 
+    /* -----------------------------------------------------
+       CURRENT ROUND
+    ----------------------------------------------------- */
+
     .current-round {
         flex-wrap: wrap;
+
         gap: 8px;
+
         padding: 10px 14px;
     }
 
 
+    /* -----------------------------------------------------
+       LIVE INDICATOR
+    ----------------------------------------------------- */
+
     .live-indicator {
         margin-left: 4px;
+
         padding: 5px 10px;
+
         font-size: 12px !important;
     }
 
 
     .live-dot {
         width: 7px;
+
         height: 7px;
     }
 
 
-    /*
-       On a phone, four large cards cannot
-       comfortably fit on one row.
-    */
+    /* -----------------------------------------------------
+       LEADERBOARD
+       Mobile = 2 columns
+    ----------------------------------------------------- */
 
-    .top-ranking,
-    .top-ranking.top-four {
+    .leaderboard-top-row.round-one-three-row,
+    .leaderboard-top-row.round-four-row {
+
         grid-template-columns:
-            repeat(2, minmax(0, 1fr)) !important;
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
         gap: 10px;
     }
 
 
-    .remaining-ranking,
-    .remaining-ranking.remaining-six,
-    .remaining-ranking.remaining-seven {
+    .leaderboard-four-row,
+    .leaderboard-bottom-row.round-one-three-bottom-row,
+    .leaderboard-bottom-row.round-four-bottom-row {
+
         grid-template-columns:
-            repeat(2, minmax(0, 1fr));
+            repeat(
+                2,
+                minmax(0, 1fr)
+            ) !important;
+
+        gap: 10px;
     }
 
 
@@ -899,17 +1244,8 @@ button {
 
     .top-team-card {
         min-height: 165px;
+
         padding: 15px 8px;
-    }
-
-
-    .team-medal {
-        font-size: 34px;
-    }
-
-
-    .top-team-card .team-medal {
-        font-size: 36px;
     }
 
 
@@ -933,15 +1269,27 @@ button {
     }
 
 
+    /* -----------------------------------------------------
+       SECTION HEADING
+    ----------------------------------------------------- */
+
     .section-heading {
         align-items: start;
+
         flex-direction: column;
+
         gap: 5px;
     }
 
 
+    /* -----------------------------------------------------
+       COORDINATOR
+    ----------------------------------------------------- */
+
     .coordinator-page {
-        width: calc(100% - 20px);
+        width:
+            calc(100% - 20px);
+
         padding-top: 20px;
     }
 
@@ -981,77 +1329,17 @@ button {
         flex: 1;
     }
 
-}
-.logo-placeholder {
-    width: 150px;
-    height: 110px;
-    border: none;
-    border-radius: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: transparent;
-    background: transparent;
-    overflow: hidden;
-}
 
-.logo-placeholder img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-}
-/* =========================
-   CLAPPING AUDIO CONTROL
-========================= */
-
-.audio-control-card {
-    padding: 22px 28px;
-}
-
-.audio-control-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 25px;
-}
-
-.audio-control-content h2 {
-    margin: 6px 0 5px;
-}
-
-.audio-control-content p {
-    margin: 0;
-}
-
-.clap-toggle-button {
-    width: auto !important;
-    min-width: 180px;
-    margin-top: 0 !important;
-    padding: 13px 20px !important;
-    border-radius: 12px !important;
-    background: #17834b !important;
-    color: #fff !important;
-    font-weight: 900 !important;
-    border: none !important;
-}
-
-.clap-toggle-button.clap-disabled {
-    background: #647180 !important;
-}
-
-.clap-toggle-button:hover {
-    filter: brightness(1.06);
-}
-
-
-@media (max-width: 700px) {
+    /* -----------------------------------------------------
+       CLAPPING CONTROL
+    ----------------------------------------------------- */
 
     .audio-control-content {
         flex-direction: column;
+
         align-items: stretch;
     }
+
 
     .clap-toggle-button {
         width: 100% !important;

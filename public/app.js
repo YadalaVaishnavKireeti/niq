@@ -1,5 +1,10 @@
 let currentRound = "";
 
+
+/* =========================================================
+   REFRESH DASHBOARD
+========================================================= */
+
 async function refreshDashboard() {
 
     try {
@@ -43,15 +48,19 @@ async function refreshDashboard() {
             await roundResponse.json();
 
 
+        currentRound =
+            roundData.round;
+
+
         document.getElementById(
             "current-round"
         ).textContent =
-            roundData.round;
+            currentRound;
 
 
         renderLeaderboard(
             leaderboard,
-            roundData.round
+            currentRound
         );
 
 
@@ -65,6 +74,11 @@ async function refreshDashboard() {
     }
 
 }
+
+
+/* =========================================================
+   RENDER LEADERBOARD
+========================================================= */
 
 function renderLeaderboard(
     data,
@@ -81,6 +95,7 @@ function renderLeaderboard(
 
         container.innerHTML = `
             <div class="empty-state">
+
                 <div>🏁</div>
 
                 <h3>
@@ -91,21 +106,42 @@ function renderLeaderboard(
                     Scores will appear here
                     as soon as the first round begins.
                 </p>
+
             </div>
         `;
 
         return;
+
     }
 
 
     /*
-     * ROUND 4 = TOP 4
-     * ALL OTHER ROUNDS = TOP 3
+     * =====================================================
+     * ROUND LAYOUT
+     *
+     * ROUNDS 1, 2, 3:
+     *
+     * Row 1 = 3 teams
+     * Row 2 = 4 teams
+     * Row 3 = 4 teams
+     *
+     * TOTAL = 11 TEAMS
+     *
+     *
+     * ROUND 4:
+     *
+     * Row 1 = 4 teams
+     * Row 2 = 4 teams
+     * Row 3 = 3 teams
+     *
+     * TOTAL = 11 TEAMS
+     * =====================================================
      */
+
 
     const isRound4 =
         currentRound.startsWith(
-            "ROUND 4: GAME CHANGER"
+            "ROUND 4:"
         );
 
 
@@ -115,6 +151,10 @@ function renderLeaderboard(
             : 3;
 
 
+    /*
+     * Top teams
+     */
+
     const topTeams =
         data.slice(
             0,
@@ -122,105 +162,334 @@ function renderLeaderboard(
         );
 
 
+    /*
+     * Remaining teams
+     */
+
     const remainingTeams =
         data.slice(
             topCount
         );
 
 
+    /*
+     * Second row:
+     * Always 4 teams
+     */
+
+    const secondRowTeams =
+        remainingTeams.slice(
+            0,
+            4
+        );
+
+
+    /*
+     * Third row:
+     *
+     * Rounds 1-3 = 4 teams
+     * Round 4 = 3 teams
+     */
+
+    const thirdRowTeams =
+        remainingTeams.slice(
+            4
+        );
+
+
+    /*
+     * Create the three rows
+     */
+
+    const topRow =
+        createLeaderboardRow(
+            topTeams,
+            true,
+            isRound4
+        );
+
+
+    const secondRow =
+        createLeaderboardRow(
+            secondRowTeams,
+            false,
+            false
+        );
+
+
+    const thirdRow =
+        createLeaderboardRow(
+            thirdRowTeams,
+            false,
+            isRound4
+        );
+
+
+    /*
+     * Put all three rows into leaderboard
+     */
+
     container.innerHTML = `
 
-        <div
-            class="
-                top-ranking
-                ${isRound4
-                    ? "top-four"
-                    : "top-three"}
-            "
-        >
+        ${topRow}
 
-            ${topTeams
-                .map(
-                    (team, index) =>
-                        createTeamCard(
-                            team,
-                            index,
-                            true
-                        )
-                )
-                .join("")
-            }
+        ${secondRow}
 
-        </div>
-
-
-        <div
-            class="
-                remaining-ranking
-                ${isRound4
-                    ? "remaining-six"
-                    : "remaining-seven"}
-            "
-        >
-
-            ${remainingTeams
-                .map(
-                    (team, index) =>
-                        createTeamCard(
-                            team,
-                            topCount + index,
-                            false
-                        )
-                )
-                .join("")
-            }
-
-        </div>
+        ${thirdRow}
 
     `;
 
 
-    document.getElementById(
-        "last-updated"
-    ).textContent =
-        `Updated ${
-            new Date().toLocaleTimeString(
-                [],
-                {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit"
-                }
-            )
-        }`;
+    /*
+     * Last updated time
+     */
+
+    const lastUpdated =
+        document.getElementById(
+            "last-updated"
+        );
+
+
+    if (lastUpdated) {
+
+        lastUpdated.textContent =
+            `Updated ${
+                new Date().toLocaleTimeString(
+                    [],
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit"
+                    }
+                )
+            }`;
+
+    }
 
 }
 
-function createTeamCard(team, index, isTop) {
-    const colourClass = `team-colour-${index + 1}`;
-    const rankDisplay =
-        index === 0 ? "🥇" :
-        index === 1 ? "🥈" :
-        index === 2 ? "🥉" :
-        index === 3 ? "🏅" :
-        `#${index + 1}`;
+
+/* =========================================================
+   CREATE LEADERBOARD ROW
+========================================================= */
+
+function createLeaderboardRow(
+    teams,
+    isTopRow,
+    isRound4
+) {
+
+    if (!teams.length) {
+        return "";
+    }
+
+
+    let rowClass =
+        "leaderboard-row";
+
+
+    /*
+     * First row
+     */
+
+    if (isTopRow) {
+
+        rowClass +=
+            isRound4
+                ? " leaderboard-top-row round-four-row"
+                : " leaderboard-top-row round-one-three-row";
+
+    }
+
+
+    /*
+     * Second row
+     */
+
+    else if (
+        teams.length === 4
+    ) {
+
+        rowClass +=
+            " leaderboard-four-row";
+
+    }
+
+
+    /*
+     * Third row
+     *
+     * Round 4 has 3 teams.
+     * Rounds 1-3 have 4 teams.
+     */
+
+    else {
+
+        rowClass +=
+            isRound4
+                ? " leaderboard-bottom-row round-four-bottom-row"
+                : " leaderboard-bottom-row round-one-three-bottom-row";
+
+    }
+
 
     return `
-        <article class="team-card ${isTop ? "top-team-card" : "remaining-team-card"} ${colourClass}">
-            <div class="team-rank">${rankDisplay}</div>
-            <div class="team-name">${escapeHtml(team.team)}</div>
-            <div class="team-score">${team.total_score}<span> PTS</span></div>
-        </article>`;
+        <div class="${rowClass}">
+
+            ${teams
+                .map(
+                    (team) =>
+                        createTeamCard(
+                            team,
+                            team.rank,
+                            isTopRow
+                        )
+                )
+                .join("")
+            }
+
+        </div>
+    `;
+
 }
+
+
+/* =========================================================
+   CREATE TEAM CARD
+========================================================= */
+
+function createTeamCard(
+    team,
+    rank,
+    isTop
+) {
+
+    /*
+     * Team colour is based on
+     * the team's current rank.
+     */
+
+    const colourClass =
+        `team-colour-${rank}`;
+
+
+    /*
+     * Medal / rank display
+     */
+
+    let rankDisplay;
+
+
+    if (rank === 1) {
+
+        rankDisplay = "🥇";
+
+    }
+
+    else if (rank === 2) {
+
+        rankDisplay = "🥈";
+
+    }
+
+    else if (rank === 3) {
+
+        rankDisplay = "🥉";
+
+    }
+
+    else if (rank === 4) {
+
+        rankDisplay = "🏅";
+
+    }
+
+    else {
+
+        rankDisplay =
+            `#${rank}`;
+
+    }
+
+
+    return `
+        <article
+            class="
+                team-card
+                ${isTop
+                    ? "top-team-card"
+                    : "remaining-team-card"}
+                ${colourClass}
+            "
+        >
+
+            <div class="team-rank">
+                ${rankDisplay}
+            </div>
+
+            <div class="team-name">
+                ${escapeHtml(team.team)}
+            </div>
+
+            <div class="team-score">
+                ${team.total_score}
+                <span> PTS</span>
+            </div>
+
+        </article>
+    `;
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
 
 function escapeHtml(value) {
+
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+
 }
 
+
+/* =========================================================
+   INITIAL LOAD
+========================================================= */
+
 refreshDashboard();
-setInterval(refreshDashboard, 3000);
+
+
+/* =========================================================
+   AUTO REFRESH EVERY 3 SECONDS
+========================================================= */
+
+setInterval(
+    refreshDashboard,
+    3000
+);
