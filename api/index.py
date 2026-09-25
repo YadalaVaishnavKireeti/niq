@@ -367,10 +367,12 @@ def trigger_clap(x_coordinator_pin: str | None = Header(default=None)):
 
 @app.get("/api/clap/pending")
 def get_pending_clap(after: str | None = Query(default=None)):
-    """Return the oldest pending clap created after the dashboard was armed.
+    """Atomically claim one new clap for the dashboard.
 
-    The dashboard supplies its arm timestamp. This prevents stale pending
-    events from ever blocking a newly enabled scoreboard.
+    A returned event is immediately changed from pending -> playing.
+    This is critical: the dashboard polls every second, so merely returning
+    a pending row can cause the same 9-second sound to be started again and
+    again if the completion request is delayed or fails.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -379,23 +381,49 @@ def get_pending_clap(after: str | None = Query(default=None)):
                     datetime.fromisoformat(after.replace("Z", "+00:00"))
                 except ValueError:
                     raise HTTPException(status_code=400, detail="Invalid clap timestamp.")
+
                 cur.execute("""
-                    SELECT id, created_at
-                    FROM clap_events
-                    WHERE status = 'pending'
-                      AND created_at > %s::timestamptz
-                    ORDER BY created_at ASC, id ASC
-                    LIMIT 1
-                """, (after,))
+                    WITH candidate AS (
+                        SELECT id
+                        FROM clap_events
+                        WHERE (
+                                status = 'pending'
+                                AND created_at > %s::timestamptz
+                              )
+                           OR (
+                                status = 'playing'
+                                AND created_at > %s::timestamptz
+                                AND created_at < NOW() - INTERVAL '30 seconds'
+                              )
+                        ORDER BY created_at ASC, id ASC
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE clap_events e
+                    SET status = 'playing'
+                    FROM candidate c
+                    WHERE e.id = c.id
+                    RETURNING e.id, e.created_at
+                """, (after, after))
             else:
                 cur.execute("""
-                    SELECT id, created_at
-                    FROM clap_events
-                    WHERE status = 'pending'
-                    ORDER BY created_at ASC, id ASC
-                    LIMIT 1
+                    WITH candidate AS (
+                        SELECT id
+                        FROM clap_events
+                        WHERE status = 'pending'
+                           OR (status = 'playing' AND created_at < NOW() - INTERVAL '30 seconds')
+                        ORDER BY created_at ASC, id ASC
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
+                    )
+                    UPDATE clap_events e
+                    SET status = 'playing'
+                    FROM candidate c
+                    WHERE e.id = c.id
+                    RETURNING e.id, e.created_at
                 """)
             row = cur.fetchone()
+        conn.commit()
 
     if not row:
         return {"event": None}
@@ -407,12 +435,10 @@ def get_pending_clap(after: str | None = Query(default=None)):
         }
     }
 
+
 @app.post("/api/clap/complete")
 def complete_clap(payload: ClapComplete):
-    """
-    The public dashboard calls this only after the audio 'ended'
-    event fires.
-    """
+    """Mark a claimed/playing clap completed after audio playback ends."""
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -420,7 +446,7 @@ def complete_clap(payload: ClapComplete):
                 SET status = 'completed',
                     completed_at = NOW()
                 WHERE id = %s
-                  AND status = 'pending'
+                  AND status = 'playing'
                 RETURNING id, completed_at
             """, (payload.event_id,))
             row = cur.fetchone()
@@ -429,7 +455,7 @@ def complete_clap(payload: ClapComplete):
     if not row:
         raise HTTPException(
             status_code=404,
-            detail="Pending clap event not found."
+            detail="Clap event is not currently playing."
         )
 
     return {

@@ -22,6 +22,7 @@ let dashboardSoundEnabled = false;
 let clapPlaying = false;
 let pendingClapEventId = null;
 let dashboardSoundArmedAt = null;
+const completedClapIds = new Set();
 
 
 /* =========================================================
@@ -43,7 +44,7 @@ async function loadClapBuffer() {
     }
 
     clapAudioLoading = fetch(
-        "/audio/clap.mp3?audio=v7",
+        "/audio/clap.mp3?audio=v8",
         { cache: "no-store" }
     )
         .then(async (response) => {
@@ -164,6 +165,7 @@ async function playRemoteClap(eventId) {
     if (
         clapPlaying ||
         pendingClapEventId === eventId ||
+        completedClapIds.has(eventId) ||
         !dashboardSoundEnabled ||
         !clapAudioBuffer
     ) {
@@ -183,6 +185,7 @@ async function playRemoteClap(eventId) {
 
         source = clapAudioContext.createBufferSource();
         source.buffer = clapAudioBuffer;
+        source.loop = false;
         source.connect(clapAudioContext.destination);
 
         await new Promise((resolve, reject) => {
@@ -216,12 +219,14 @@ async function playRemoteClap(eventId) {
         );
 
         if (!completeResponse.ok) {
+            const detail = await completeResponse.text().catch(() => "");
             throw new Error(
-                `Clap completion failed (HTTP ${completeResponse.status}).`
+                `Clap completion failed (HTTP ${completeResponse.status}) ${detail}`
             );
         }
 
-        console.log(`Remote clap ${eventId} played and acknowledged.`);
+        completedClapIds.add(eventId);
+        console.log(`Remote clap ${eventId} played once and acknowledged.`);
 
     } catch (error) {
 
@@ -256,7 +261,7 @@ async function checkForClap() {
         const response = await fetch(
             "/api/clap/pending?after=" +
                 encodeURIComponent(dashboardSoundArmedAt) +
-                "&v=7",
+                "&v=8",
             { cache: "no-store" }
         );
 
