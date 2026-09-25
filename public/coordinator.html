@@ -26,10 +26,6 @@
 <main class="coordinator-page">
 
 
-    <!-- =====================================================
-         HEADER
-    ====================================================== -->
-
     <section class="coordinator-header">
 
         <div class="eyebrow">
@@ -65,7 +61,6 @@
             Enter the coordinator PIN to continue.
         </p>
 
-
         <form id="login-form">
 
             <label for="pin">
@@ -86,7 +81,6 @@
 
         </form>
 
-
         <div
             id="login-message"
             class="message"
@@ -106,9 +100,7 @@
     >
 
 
-        <!-- =================================================
-             CONTEST CONTROLS
-        ================================================== -->
+        <!-- CONTEST CONTROLS -->
 
         <div class="control-card">
 
@@ -127,7 +119,6 @@
 
                 </div>
 
-
                 <button
                     id="download-button"
                     class="secondary-button"
@@ -145,12 +136,10 @@
                     Live Round
                 </label>
 
-
                 <select
                     id="active-round"
                     required
                 ></select>
-
 
                 <button type="submit">
                     📡 Set Live Round
@@ -172,9 +161,7 @@
              AUDIO CONTROL
         ================================================== -->
 
-        <div
-            class="control-card audio-control-card"
-        >
+        <div class="control-card audio-control-card">
 
             <div class="audio-control-content">
 
@@ -189,8 +176,8 @@
                     </h2>
 
                     <p class="muted">
-                        Play applause automatically after
-                        a successful score entry.
+                        Click the button to play one clap
+                        on the public scoreboard.
                     </p>
 
                 </div>
@@ -199,7 +186,7 @@
                 <button
                     type="button"
                     id="clap-toggle"
-                    class="clap-toggle-button"
+                    class="clap-toggle-button clap-disabled"
                 >
                     🔇 Clapping OFF
                 </button>
@@ -228,11 +215,9 @@
 
             <form id="score-form">
 
-
                 <label for="team">
                     Team
                 </label>
-
 
                 <select
                     id="team"
@@ -240,17 +225,14 @@
                 ></select>
 
 
-
                 <label for="question">
                     Question
                 </label>
-
 
                 <select
                     id="question"
                     required
                 ></select>
-
 
 
                 <div class="live-round-note">
@@ -264,11 +246,9 @@
                 </div>
 
 
-
                 <label for="marks">
                     Marks
                 </label>
-
 
                 <input
                     type="number"
@@ -281,9 +261,7 @@
                 >
 
 
-
                 <div class="score-action-buttons">
-
 
                     <button
                         type="submit"
@@ -303,7 +281,6 @@
                     >
                         ➖ Subtract Marks
                     </button>
-
 
                 </div>
 
@@ -393,22 +370,6 @@
 
 
 
-<!-- =========================================================
-     CLAPPING AUDIO
-========================================================== -->
-
-<audio
-    id="clap-audio"
-    preload="auto"
->
-    <source
-        src="/audio/clap.mp3"
-        type="audio/mpeg"
-    >
-</audio>
-
-
-
 <script>
 
 
@@ -417,117 +378,58 @@
 ========================================================= */
 
 const loginSection =
-    document.getElementById(
-        "login-section"
-    );
-
+    document.getElementById("login-section");
 
 const consoleSection =
-    document.getElementById(
-        "console-section"
-    );
-
+    document.getElementById("console-section");
 
 const loginForm =
-    document.getElementById(
-        "login-form"
-    );
-
+    document.getElementById("login-form");
 
 const roundForm =
-    document.getElementById(
-        "round-form"
-    );
-
+    document.getElementById("round-form");
 
 const scoreForm =
-    document.getElementById(
-        "score-form"
-    );
-
+    document.getElementById("score-form");
 
 const pinInput =
-    document.getElementById(
-        "pin"
-    );
-
+    document.getElementById("pin");
 
 const loginMessage =
-    document.getElementById(
-        "login-message"
-    );
-
+    document.getElementById("login-message");
 
 const roundMessage =
-    document.getElementById(
-        "round-message"
-    );
-
+    document.getElementById("round-message");
 
 const scoreMessage =
-    document.getElementById(
-        "score-message"
-    );
-
+    document.getElementById("score-message");
 
 const teamSelect =
-    document.getElementById(
-        "team"
-    );
-
+    document.getElementById("team");
 
 const questionSelect =
-    document.getElementById(
-        "question"
-    );
-
+    document.getElementById("question");
 
 const activeRoundSelect =
-    document.getElementById(
-        "active-round"
-    );
-
+    document.getElementById("active-round");
 
 const entryRoundLabel =
-    document.getElementById(
-        "entry-round-label"
-    );
-
+    document.getElementById("entry-round-label");
 
 const marksInput =
-    document.getElementById(
-        "marks"
-    );
-
+    document.getElementById("marks");
 
 const recentEntries =
-    document.getElementById(
-        "recent-entries"
-    );
-
+    document.getElementById("recent-entries");
 
 const teamTotals =
-    document.getElementById(
-        "team-totals"
-    );
-
+    document.getElementById("team-totals");
 
 const downloadButton =
-    document.getElementById(
-        "download-button"
-    );
-
+    document.getElementById("download-button");
 
 const clapToggle =
-    document.getElementById(
-        "clap-toggle"
-    );
-
-
-const clapAudio =
-    document.getElementById(
-        "clap-audio"
-    );
+    document.getElementById("clap-toggle");
 
 
 
@@ -541,98 +443,108 @@ let teams = [];
 
 let currentLiveRound = "";
 
+let clapEventId = null;
 
-/*
- * IMPORTANT:
- *
- * Clap is OFF by default.
- *
- * It will only be ON if the coordinator previously
- * enabled it and localStorage contains "true".
- */
-
-let clapEnabled =
-    localStorage.getItem(
-        "clapEnabled"
-    ) === "true";
+let clapStatusTimer = null;
 
 
 
 /* =========================================================
-   CLAPPING CONTROL
+   CLAP BUTTON
 ========================================================= */
 
-function updateClapButton() {
+function setClapButtonOff() {
 
-    if (clapEnabled) {
+    clapToggle.disabled = false;
 
-        clapToggle.textContent =
-            "🔊 Clapping ON";
+    clapToggle.textContent =
+        "🔇 Clapping OFF";
+
+    clapToggle.classList.add(
+        "clap-disabled"
+    );
+
+    clapToggle.classList.remove(
+        "clap-enabled"
+    );
+
+}
 
 
-        clapToggle.classList.add(
-            "clap-enabled"
+function setClapButtonPlaying() {
+
+    clapToggle.disabled = true;
+
+    clapToggle.textContent =
+        "🔊 Clapping...";
+
+    clapToggle.classList.remove(
+        "clap-disabled"
+    );
+
+    clapToggle.classList.add(
+        "clap-enabled"
+    );
+
+}
+
+
+function stopClapStatusPolling() {
+
+    if (clapStatusTimer !== null) {
+
+        clearInterval(
+            clapStatusTimer
         );
 
-
-        clapToggle.classList.remove(
-            "clap-disabled"
-        );
-
-    }
-
-    else {
-
-        clapToggle.textContent =
-            "🔇 Clapping OFF";
-
-
-        clapToggle.classList.add(
-            "clap-disabled"
-        );
-
-
-        clapToggle.classList.remove(
-            "clap-enabled"
-        );
+        clapStatusTimer = null;
 
     }
 
 }
 
 
+async function checkClapStatus() {
 
-/*
- * Unlock / test the audio.
- *
- * This function is called directly from the
- * coordinator's button click.
- *
- * That is important because mobile browsers
- * commonly block audio that starts without
- * a user interaction.
- */
-
-async function enableClapSound() {
+    if (!clapEventId) {
+        return;
+    }
 
     try {
 
-        clapAudio.currentTime = 0;
+        const response =
+            await fetch(
+                `/api/clap/${clapEventId}`,
+                {
+                    cache: "no-store"
+                }
+            );
 
+        if (!response.ok) {
+            return;
+        }
 
-        await clapAudio.play();
+        const data =
+            await response.json();
 
+        if (
+            data.status === "played"
+        ) {
 
-        console.log(
-            "Clapping audio enabled."
-        );
+            clapEventId = null;
+
+            stopClapStatusPolling();
+
+            setClapButtonOff();
+
+        }
 
     }
 
     catch (error) {
 
         console.warn(
-            "Unable to unlock clapping audio:",
+            "Unable to check clap status:",
             error
         );
 
@@ -641,52 +553,74 @@ async function enableClapSound() {
 }
 
 
+async function triggerClap() {
 
-/*
- * Play applause after a successful score entry.
- */
-
-function playClap() {
-
-    if (!clapEnabled) {
-
+    if (
+        !coordinatorPin ||
+        clapEventId
+    ) {
         return;
-
     }
+
+
+    setClapButtonPlaying();
 
 
     try {
 
-        clapAudio.currentTime = 0;
-
-
-        const playPromise =
-            clapAudio.play();
-
-
-        if (
-            playPromise !== undefined
-        ) {
-
-            playPromise.catch(
-                (error) => {
-
-                    console.warn(
-                        "Clapping audio could not play:",
-                        error
-                    );
-
+        const response =
+            await authorizedFetch(
+                "/api/clap",
+                {
+                    method: "POST"
                 }
+            );
+
+
+        const data =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Unable to trigger clap."
             );
 
         }
 
+
+        clapEventId =
+            data.event_id;
+
+
+        stopClapStatusPolling();
+
+
+        clapStatusTimer =
+            setInterval(
+                checkClapStatus,
+                500
+            );
+
+
+        await checkClapStatus();
+
     }
 
     catch (error) {
 
-        console.warn(
-            "Clapping audio error:",
+        clapEventId = null;
+
+        stopClapStatusPolling();
+
+        setClapButtonOff();
+
+        console.error(
+            "Unable to trigger clap:",
             error
         );
 
@@ -695,65 +629,13 @@ function playClap() {
 }
 
 
-
-/*
- * Clap toggle button.
- */
-
 clapToggle.addEventListener(
     "click",
-    async () => {
-
-
-        /*
-         * Toggle the current state.
-         */
-
-        clapEnabled =
-            !clapEnabled;
-
-
-        /*
-         * Remember the setting.
-         */
-
-        localStorage.setItem(
-            "clapEnabled",
-            String(clapEnabled)
-        );
-
-
-        /*
-         * Update button appearance.
-         */
-
-        updateClapButton();
-
-
-        /*
-         * If the coordinator just enabled
-         * clapping, immediately play one clap.
-         *
-         * Because this happens directly inside
-         * the click event, browsers allow it.
-         */
-
-        if (clapEnabled) {
-
-            await enableClapSound();
-
-        }
-
-    }
+    triggerClap
 );
 
 
-
-/*
- * Set initial button state.
- */
-
-updateClapButton();
+setClapButtonOff();
 
 
 
@@ -773,9 +655,7 @@ loginForm.addEventListener(
 
 
         if (!pin) {
-
             return;
-
         }
 
 
@@ -896,8 +776,7 @@ roundForm.addEventListener(
                 await authorizedFetch(
                     "/api/current-round",
                     {
-                        method:
-                            "PUT",
+                        method: "PUT",
 
                         headers: {
                             "Content-Type":
@@ -1005,10 +884,7 @@ scoreForm.addEventListener(
 
         buttons.forEach(
             (button) => {
-
-                button.disabled =
-                    true;
-
+                button.disabled = true;
             }
         );
 
@@ -1019,8 +895,7 @@ scoreForm.addEventListener(
                 await authorizedFetch(
                     "/api/scores",
                     {
-                        method:
-                            "POST",
+                        method: "POST",
 
                         headers: {
                             "Content-Type":
@@ -1073,13 +948,13 @@ scoreForm.addEventListener(
 
 
             /*
-             * PLAY APPLAUSE
+             * IMPORTANT:
              *
-             * This only plays if the coordinator
-             * has manually enabled clapping.
+             * There is NO clap here.
+             *
+             * Add/subtract marks never trigger
+             * the applause system.
              */
-
-            playClap();
 
 
             await refreshCoordinatorData();
@@ -1097,10 +972,7 @@ scoreForm.addEventListener(
 
             buttons.forEach(
                 (button) => {
-
-                    button.disabled =
-                        false;
-
+                    button.disabled = false;
                 }
             );
 
@@ -1154,9 +1026,7 @@ downloadButton.addEventListener(
 
 
             const link =
-                document.createElement(
-                    "a"
-                );
+                document.createElement("a");
 
 
             link.href =
@@ -1296,8 +1166,7 @@ async function loadRecentEntries() {
                     (entry) => {
 
                         const sign =
-                            entry.operation ===
-                            "subtract"
+                            entry.operation === "subtract"
                                 ? "−"
                                 : "+";
 
@@ -1318,7 +1187,6 @@ async function loadRecentEntries() {
                                         )}
                                     </strong>
 
-
                                     <span>
                                         ${escapeHtml(
                                             entry.round
@@ -1326,7 +1194,6 @@ async function loadRecentEntries() {
                                         · Question
                                         ${entry.question}
                                     </span>
-
 
                                     <span>
                                         ${new Date(
@@ -1339,8 +1206,7 @@ async function loadRecentEntries() {
 
                                 <strong
                                     class="entry-score ${
-                                        entry.operation ===
-                                        "subtract"
+                                        entry.operation === "subtract"
                                             ? "negative"
                                             : ""
                                     }"
@@ -1441,11 +1307,9 @@ async function loadTeamTotals() {
                                 )}
                             </span>
 
-
                             <strong>
                                 ${team.total_score}
                             </strong>
-
 
                             <small>
                                 POINTS
@@ -1524,9 +1388,7 @@ async function editEntry(id) {
 
 
         if (newTeam === null) {
-
             return;
-
         }
 
 
@@ -1538,9 +1400,7 @@ async function editEntry(id) {
 
 
         if (newRound === null) {
-
             return;
-
         }
 
 
@@ -1552,9 +1412,7 @@ async function editEntry(id) {
 
 
         if (newQuestion === null) {
-
             return;
-
         }
 
 
@@ -1566,9 +1424,7 @@ async function editEntry(id) {
 
 
         if (newMarks === null) {
-
             return;
-
         }
 
 
@@ -1580,9 +1436,7 @@ async function editEntry(id) {
 
 
         if (newOperation === null) {
-
             return;
-
         }
 
 
@@ -1612,8 +1466,7 @@ async function editEntry(id) {
             await authorizedFetch(
                 `/api/scores/${id}`,
                 {
-                    method:
-                        "PUT",
+                    method: "PUT",
 
                     headers: {
                         "Content-Type":
@@ -1686,8 +1539,7 @@ async function deleteEntry(id) {
             await authorizedFetch(
                 `/api/scores/${id}`,
                 {
-                    method:
-                        "DELETE"
+                    method: "DELETE"
                 }
             );
 
@@ -1710,6 +1562,13 @@ async function deleteEntry(id) {
 
         scoreMessage.textContent =
             "🗑 Score entry deleted.";
+
+
+        /*
+         * IMPORTANT:
+         *
+         * Delete does NOT trigger applause.
+         */
 
 
         await refreshCoordinatorData();
@@ -1777,9 +1636,7 @@ async function readJsonResponse(
 
 
     if (!text) {
-
         return {};
-
     }
 
 
@@ -1794,11 +1651,9 @@ async function readJsonResponse(
     catch {
 
         return {
-
             detail:
                 text ||
                 `Server returned HTTP ${response.status}.`
-
         };
 
     }
@@ -1839,36 +1694,15 @@ function populateSelect(
    HTML ESCAPING
 ========================================================= */
 
-function escapeHtml(
-    value
-) {
+function escapeHtml(value) {
 
     return String(value)
 
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 
 }
 
