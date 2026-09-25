@@ -1,61 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coordinator Console</title>
-
-    <link
-        rel="stylesheet"
-        href="/style.css"
-    >
-
+    <link rel="stylesheet" href="/style.css">
 </head>
-
 
 <body>
 
-
 <main class="coordinator-page">
 
-
     <section class="coordinator-header">
-
-        <div class="eyebrow">
-            ADMINISTRATION
-        </div>
-
-        <h1>
-            🎯 Score Entry Console
-        </h1>
-
-        <p>
-            Manage live quiz scores and the active round.
-        </p>
-
+        <div class="eyebrow">ADMINISTRATION</div>
+        <h1>🎯 Score Entry Console</h1>
+        <p>Manage live quiz scores and the active round.</p>
     </section>
 
 
+    <section id="login-section" class="control-card">
 
-    <!-- =====================================================
-         LOGIN
-    ====================================================== -->
-
-    <section
-        id="login-section"
-        class="control-card"
-    >
-
-        <h2>
-            Coordinator Access
-        </h2>
+        <h2>Coordinator Access</h2>
 
         <p class="muted">
             Enter the coordinator PIN to continue.
@@ -63,9 +28,7 @@
 
         <form id="login-form">
 
-            <label for="pin">
-                Coordinator PIN
-            </label>
+            <label for="pin">Coordinator PIN</label>
 
             <input
                 type="password"
@@ -81,23 +44,12 @@
 
         </form>
 
-        <div
-            id="login-message"
-            class="message"
-        ></div>
+        <div id="login-message" class="message"></div>
 
     </section>
 
 
-
-    <!-- =====================================================
-         COORDINATOR CONSOLE
-    ====================================================== -->
-
-    <section
-        id="console-section"
-        class="hidden"
-    >
+    <section id="console-section" class="hidden">
 
 
         <!-- CONTEST CONTROLS -->
@@ -107,16 +59,11 @@
             <div class="console-top">
 
                 <div>
-
-                    <h2>
-                        Contest Controls
-                    </h2>
+                    <h2>Contest Controls</h2>
 
                     <p class="muted">
-                        Set the round shown to the audience
-                        before entering scores.
+                        Set the round shown to the audience before entering scores.
                     </p>
-
                 </div>
 
                 <button
@@ -147,26 +94,18 @@
 
             </form>
 
-
-            <div
-                id="round-message"
-                class="message"
-            ></div>
+            <div id="round-message" class="message"></div>
 
         </div>
 
 
-
-        <!-- =================================================
-             AUDIO CONTROL
-        ================================================== -->
+        <!-- AUDIO CONTROL -->
 
         <div class="control-card audio-control-card">
 
             <div class="audio-control-content">
 
                 <div>
-
                     <span class="eyebrow">
                         SOUND CONTROL
                     </span>
@@ -176,19 +115,16 @@
                     </h2>
 
                     <p class="muted">
-                        Click the button to play one clap
-                        on the public scoreboard.
+                        Play applause automatically after a successful score entry.
                     </p>
-
                 </div>
-
 
                 <button
                     type="button"
                     id="clap-toggle"
-                    class="clap-toggle-button clap-disabled"
+                    class="clap-toggle-button"
                 >
-                    🔇 Clapping OFF
+                    🔊 Clapping ON
                 </button>
 
             </div>
@@ -196,16 +132,11 @@
         </div>
 
 
-
-        <!-- =================================================
-             SCORE ENTRY
-        ================================================== -->
+        <!-- SCORE ENTRY -->
 
         <div class="control-card">
 
-            <h2>
-                Enter Score
-            </h2>
+            <h2>Enter Score</h2>
 
             <p class="muted">
                 The live round is used automatically.
@@ -238,7 +169,6 @@
                 <div class="live-round-note">
 
                     Scores will be recorded against:
-
                     <strong id="entry-round-label">
                         Loading...
                     </strong>
@@ -272,7 +202,6 @@
                         ➕ Add Marks
                     </button>
 
-
                     <button
                         type="submit"
                         id="subtract-score"
@@ -286,19 +215,12 @@
 
             </form>
 
-
-            <div
-                id="score-message"
-                class="message"
-            ></div>
+            <div id="score-message" class="message"></div>
 
         </div>
 
 
-
-        <!-- =================================================
-             TEAM TOTALS
-        ================================================== -->
+        <!-- TEAM TOTALS -->
 
         <div class="control-card">
 
@@ -318,7 +240,6 @@
 
             </div>
 
-
             <div
                 id="team-totals"
                 class="team-totals-grid"
@@ -329,10 +250,7 @@
         </div>
 
 
-
-        <!-- =================================================
-             HISTORY
-        ================================================== -->
+        <!-- HISTORY -->
 
         <div
             id="entries-section"
@@ -355,27 +273,31 @@
 
             </div>
 
-
             <div id="recent-entries">
                 Loading...
             </div>
 
         </div>
 
-
     </section>
-
 
 </main>
 
 
+<!-- CLAPPING AUDIO -->
+
+<audio
+    id="clap-audio"
+    preload="auto"
+>
+    <source
+        src="/audio/clap.mp3"
+        type="audio/mpeg"
+    >
+</audio>
+
 
 <script>
-
-
-/* =========================================================
-   DOM REFERENCES
-========================================================= */
 
 const loginSection =
     document.getElementById("login-section");
@@ -431,11 +353,9 @@ const downloadButton =
 const clapToggle =
     document.getElementById("clap-toggle");
 
+const clapAudio =
+    document.getElementById("clap-audio");
 
-
-/* =========================================================
-   GLOBAL STATE
-========================================================= */
 
 let coordinatorPin = "";
 
@@ -443,205 +363,105 @@ let teams = [];
 
 let currentLiveRound = "";
 
-let clapEventId = null;
-
-let clapStatusTimer = null;
-
+let clapEnabled =
+    localStorage.getItem("clapEnabled") !== "false";
 
 
-/* =========================================================
-   CLAP BUTTON
-========================================================= */
+/* =========================
+   CLAPPING CONTROL
+========================= */
 
-function setClapButtonOff() {
+function updateClapButton() {
 
-    clapToggle.disabled = false;
+    if (clapEnabled) {
 
-    clapToggle.textContent =
-        "🔇 Clapping OFF";
+        clapToggle.textContent =
+            "🔊 Clapping ON";
 
-    clapToggle.classList.add(
-        "clap-disabled"
-    );
-
-    clapToggle.classList.remove(
-        "clap-enabled"
-    );
-
-}
-
-
-function setClapButtonPlaying() {
-
-    clapToggle.disabled = true;
-
-    clapToggle.textContent =
-        "🔊 Clapping...";
-
-    clapToggle.classList.remove(
-        "clap-disabled"
-    );
-
-    clapToggle.classList.add(
-        "clap-enabled"
-    );
-
-}
-
-
-function stopClapStatusPolling() {
-
-    if (clapStatusTimer !== null) {
-
-        clearInterval(
-            clapStatusTimer
+        clapToggle.classList.add(
+            "clap-enabled"
         );
 
-        clapStatusTimer = null;
+        clapToggle.classList.remove(
+            "clap-disabled"
+        );
 
+    } else {
+
+        clapToggle.textContent =
+            "🔇 Clapping OFF";
+
+        clapToggle.classList.add(
+            "clap-disabled"
+        );
+
+        clapToggle.classList.remove(
+            "clap-enabled"
+        );
     }
-
 }
 
 
-async function checkClapStatus() {
+function playClap() {
 
-    if (!clapEventId) {
+    if (!clapEnabled) {
         return;
     }
 
     try {
 
-        const response =
-            await fetch(
-                `/api/clap/${clapEventId}`,
-                {
-                    cache: "no-store"
-                }
-            );
+        clapAudio.currentTime = 0;
 
-        if (!response.ok) {
-            return;
-        }
+        const playPromise =
+            clapAudio.play();
 
-        const data =
-            await response.json();
+        if (playPromise !== undefined) {
 
-        if (
-            data.status === "played"
-        ) {
+            playPromise.catch((error) => {
 
-            clapEventId = null;
+                console.warn(
+                    "Clapping audio could not play:",
+                    error
+                );
 
-            stopClapStatusPolling();
-
-            setClapButtonOff();
+            });
 
         }
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         console.warn(
-            "Unable to check clap status:",
+            "Clapping audio error:",
             error
         );
 
     }
-
-}
-
-
-async function triggerClap() {
-
-    if (
-        !coordinatorPin ||
-        clapEventId
-    ) {
-        return;
-    }
-
-
-    setClapButtonPlaying();
-
-
-    try {
-
-        const response =
-            await authorizedFetch(
-                "/api/clap",
-                {
-                    method: "POST"
-                }
-            );
-
-
-        const data =
-            await readJsonResponse(
-                response
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                data.detail ||
-                "Unable to trigger clap."
-            );
-
-        }
-
-
-        clapEventId =
-            data.event_id;
-
-
-        stopClapStatusPolling();
-
-
-        clapStatusTimer =
-            setInterval(
-                checkClapStatus,
-                500
-            );
-
-
-        await checkClapStatus();
-
-    }
-
-    catch (error) {
-
-        clapEventId = null;
-
-        stopClapStatusPolling();
-
-        setClapButtonOff();
-
-        console.error(
-            "Unable to trigger clap:",
-            error
-        );
-
-    }
-
 }
 
 
 clapToggle.addEventListener(
     "click",
-    triggerClap
+    () => {
+
+        clapEnabled = !clapEnabled;
+
+        localStorage.setItem(
+            "clapEnabled",
+            String(clapEnabled)
+        );
+
+        updateClapButton();
+
+    }
 );
 
 
-setClapButtonOff();
+updateClapButton();
 
 
-
-/* =========================================================
+/* =========================
    LOGIN
-========================================================= */
+========================= */
 
 loginForm.addEventListener(
     "submit",
@@ -649,15 +469,10 @@ loginForm.addEventListener(
 
         event.preventDefault();
 
-
         const pin =
             pinInput.value.trim();
 
-
-        if (!pin) {
-            return;
-        }
-
+        if (!pin) return;
 
         loginMessage.textContent =
             "Checking access...";
@@ -670,20 +485,15 @@ loginForm.addEventListener(
                     "/api/config",
                     {
                         headers: {
-                            "X-Coordinator-PIN":
-                                pin
+                            "X-Coordinator-PIN": pin
                         },
-
-                        cache:
-                            "no-store"
+                        cache: "no-store"
                     }
                 );
 
 
             const data =
-                await readJsonResponse(
-                    response
-                );
+                await readJsonResponse(response);
 
 
             if (!response.ok) {
@@ -696,12 +506,9 @@ loginForm.addEventListener(
             }
 
 
-            coordinatorPin =
-                pin;
+            coordinatorPin = pin;
 
-
-            teams =
-                data.teams;
+            teams = data.teams;
 
 
             populateSelect(
@@ -714,11 +521,8 @@ loginForm.addEventListener(
                 questionSelect,
                 data.questions ||
                 Array.from(
-                    {
-                        length: 12
-                    },
-                    (_, i) =>
-                        i + 1
+                    { length: 12 },
+                    (_, i) => i + 1
                 )
             );
 
@@ -733,7 +537,6 @@ loginForm.addEventListener(
                 "hidden"
             );
 
-
             consoleSection.classList.remove(
                 "hidden"
             );
@@ -741,9 +544,8 @@ loginForm.addEventListener(
 
             await refreshCoordinatorData();
 
-        }
 
-        catch (error) {
+        } catch (error) {
 
             loginMessage.textContent =
                 `❌ ${error.message}`;
@@ -754,17 +556,15 @@ loginForm.addEventListener(
 );
 
 
-
-/* =========================================================
+/* =========================
    LIVE ROUND
-========================================================= */
+========================= */
 
 roundForm.addEventListener(
     "submit",
     async (event) => {
 
         event.preventDefault();
-
 
         roundMessage.textContent =
             "Updating live round...";
@@ -783,11 +583,10 @@ roundForm.addEventListener(
                                 "application/json"
                         },
 
-                        body:
-                            JSON.stringify({
-                                round:
-                                    activeRoundSelect.value
-                            })
+                        body: JSON.stringify({
+                            round:
+                                activeRoundSelect.value
+                        })
                     }
                 );
 
@@ -814,9 +613,8 @@ roundForm.addEventListener(
 
             await refreshCoordinatorData();
 
-        }
 
-        catch (error) {
+        } catch (error) {
 
             roundMessage.textContent =
                 `❌ ${error.message}`;
@@ -827,10 +625,9 @@ roundForm.addEventListener(
 );
 
 
-
-/* =========================================================
+/* =========================
    SCORE ENTRY
-========================================================= */
+========================= */
 
 scoreForm.addEventListener(
     "submit",
@@ -843,21 +640,14 @@ scoreForm.addEventListener(
             event.submitter?.dataset.operation ||
             "add";
 
-
         const team =
             teamSelect.value;
 
-
         const question =
-            Number(
-                questionSelect.value
-            );
-
+            Number(questionSelect.value);
 
         const marks =
-            Number(
-                marksInput.value
-            );
+            Number(marksInput.value);
 
 
         if (
@@ -883,9 +673,8 @@ scoreForm.addEventListener(
 
 
         buttons.forEach(
-            (button) => {
-                button.disabled = true;
-            }
+            (button) =>
+                button.disabled = true
         );
 
 
@@ -902,21 +691,20 @@ scoreForm.addEventListener(
                                 "application/json"
                         },
 
-                        body:
-                            JSON.stringify({
+                        body: JSON.stringify({
 
-                                team,
+                            team,
 
-                                round:
-                                    currentLiveRound,
+                            round:
+                                currentLiveRound,
 
-                                question,
+                            question,
 
-                                marks,
+                            marks,
 
-                                operation
+                            operation
 
-                            })
+                        })
                     }
                 );
 
@@ -943,37 +731,27 @@ scoreForm.addEventListener(
                     : `✅ ${marks} points subtracted from ${team}.`;
 
 
-            marksInput.value =
-                "";
+            marksInput.value = "";
 
 
-            /*
-             * IMPORTANT:
-             *
-             * There is NO clap here.
-             *
-             * Add/subtract marks never trigger
-             * the applause system.
-             */
+            /* PLAY APPLAUSE */
+
+            playClap();
 
 
             await refreshCoordinatorData();
 
-        }
 
-        catch (error) {
+        } catch (error) {
 
             scoreMessage.textContent =
                 `❌ ${error.message}`;
 
-        }
-
-        finally {
+        } finally {
 
             buttons.forEach(
-                (button) => {
-                    button.disabled = false;
-                }
+                (button) =>
+                    button.disabled = false
             );
 
         }
@@ -982,10 +760,9 @@ scoreForm.addEventListener(
 );
 
 
-
-/* =========================================================
+/* =========================
    EXCEL DOWNLOAD
-========================================================= */
+========================= */
 
 downloadButton.addEventListener(
     "click",
@@ -1005,7 +782,6 @@ downloadButton.addEventListener(
                     await readJsonResponse(
                         response
                     );
-
 
                 throw new Error(
                     data.detail ||
@@ -1029,32 +805,23 @@ downloadButton.addEventListener(
                 document.createElement("a");
 
 
-            link.href =
-                url;
-
+            link.href = url;
 
             link.download =
                 "quiz_scorebook.xlsx";
 
 
-            document.body.appendChild(
-                link
-            );
-
+            document.body.appendChild(link);
 
             link.click();
-
 
             link.remove();
 
 
-            window.URL.revokeObjectURL(
-                url
-            );
+            window.URL.revokeObjectURL(url);
 
-        }
 
-        catch (error) {
+        } catch (error) {
 
             scoreMessage.textContent =
                 `❌ ${error.message}`;
@@ -1065,10 +832,9 @@ downloadButton.addEventListener(
 );
 
 
-
-/* =========================================================
+/* =========================
    REFRESH DATA
-========================================================= */
+========================= */
 
 async function refreshCoordinatorData() {
 
@@ -1114,10 +880,9 @@ async function refreshCoordinatorData() {
 }
 
 
-
-/* =========================================================
+/* =========================
    SCORE HISTORY
-========================================================= */
+========================= */
 
 async function loadRecentEntries() {
 
@@ -1148,11 +913,9 @@ async function loadRecentEntries() {
         if (!entries.length) {
 
             recentEntries.innerHTML =
-                `
-                    <p class="muted">
-                        No scores entered yet.
-                    </p>
-                `;
+                `<p class="muted">
+                    No scores entered yet.
+                </p>`;
 
             return;
 
@@ -1162,93 +925,77 @@ async function loadRecentEntries() {
         recentEntries.innerHTML =
             entries
                 .slice(0, 30)
-                .map(
-                    (entry) => {
+                .map((entry) => {
 
-                        const sign =
-                            entry.operation === "subtract"
-                                ? "−"
-                                : "+";
-
-
-                        return `
-
-                            <div
-                                class="entry-row history-row"
-                            >
-
-                                <div
-                                    class="history-main"
-                                >
-
-                                    <strong>
-                                        ${escapeHtml(
-                                            entry.team
-                                        )}
-                                    </strong>
-
-                                    <span>
-                                        ${escapeHtml(
-                                            entry.round
-                                        )}
-                                        · Question
-                                        ${entry.question}
-                                    </span>
-
-                                    <span>
-                                        ${new Date(
-                                            entry.created_at
-                                        ).toLocaleString()}
-                                    </span>
-
-                                </div>
+                    const sign =
+                        entry.operation === "subtract"
+                            ? "−"
+                            : "+";
 
 
-                                <strong
-                                    class="entry-score ${
-                                        entry.operation === "subtract"
-                                            ? "negative"
-                                            : ""
-                                    }"
-                                >
-                                    ${sign}${entry.marks}
+                    return `
+
+                        <div class="entry-row history-row">
+
+                            <div class="history-main">
+
+                                <strong>
+                                    ${escapeHtml(entry.team)}
                                 </strong>
 
+                                <span>
+                                    ${escapeHtml(entry.round)}
+                                    · Question ${entry.question}
+                                </span>
 
-                                <div
-                                    class="history-actions"
-                                >
-
-                                    <button
-                                        type="button"
-                                        class="small-action"
-                                        onclick="editEntry(${entry.id})"
-                                    >
-                                        ✏️ Edit
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="small-action delete-action"
-                                        onclick="deleteEntry(${entry.id})"
-                                    >
-                                        🗑 Delete
-                                    </button>
-
-                                </div>
+                                <span>
+                                    ${new Date(
+                                        entry.created_at
+                                    ).toLocaleString()}
+                                </span>
 
                             </div>
 
-                        `;
 
-                    }
-                )
+                            <strong
+                                class="entry-score ${
+                                    entry.operation === "subtract"
+                                        ? "negative"
+                                        : ""
+                                }"
+                            >
+                                ${sign}${entry.marks}
+                            </strong>
+
+
+                            <div class="history-actions">
+
+                                <button
+                                    type="button"
+                                    class="small-action"
+                                    onclick="editEntry(${entry.id})"
+                                >
+                                    ✏️ Edit
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="small-action delete-action"
+                                    onclick="deleteEntry(${entry.id})"
+                                >
+                                    🗑 Delete
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                })
                 .join("");
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         recentEntries.textContent =
             error.message;
@@ -1258,10 +1005,9 @@ async function loadRecentEntries() {
 }
 
 
-
-/* =========================================================
+/* =========================
    TEAM TOTALS
-========================================================= */
+========================= */
 
 async function loadTeamTotals() {
 
@@ -1291,39 +1037,30 @@ async function loadTeamTotals() {
 
         teamTotals.innerHTML =
             totals
-                .map(
-                    (team, index) => `
+                .map((team, index) => `
 
-                        <div
-                            class="
-                                total-team-card
-                                total-colour-${index + 1}
-                            "
-                        >
+                    <div
+                        class="total-team-card total-colour-${index + 1}"
+                    >
 
-                            <span>
-                                ${escapeHtml(
-                                    team.team
-                                )}
-                            </span>
+                        <span>
+                            ${escapeHtml(team.team)}
+                        </span>
 
-                            <strong>
-                                ${team.total_score}
-                            </strong>
+                        <strong>
+                            ${team.total_score}
+                        </strong>
 
-                            <small>
-                                POINTS
-                            </small>
+                        <small>
+                            POINTS
+                        </small>
 
-                        </div>
+                    </div>
 
-                    `
-                )
+                `)
                 .join("");
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         teamTotals.textContent =
             error.message;
@@ -1333,10 +1070,9 @@ async function loadTeamTotals() {
 }
 
 
-
-/* =========================================================
+/* =========================
    EDIT ENTRY
-========================================================= */
+========================= */
 
 async function editEntry(id) {
 
@@ -1366,8 +1102,7 @@ async function editEntry(id) {
 
         const entry =
             entries.find(
-                (item) =>
-                    item.id === id
+                (item) => item.id === id
             );
 
 
@@ -1387,9 +1122,7 @@ async function editEntry(id) {
             );
 
 
-        if (newTeam === null) {
-            return;
-        }
+        if (newTeam === null) return;
 
 
         const newRound =
@@ -1399,9 +1132,7 @@ async function editEntry(id) {
             );
 
 
-        if (newRound === null) {
-            return;
-        }
+        if (newRound === null) return;
 
 
         const newQuestion =
@@ -1411,9 +1142,7 @@ async function editEntry(id) {
             );
 
 
-        if (newQuestion === null) {
-            return;
-        }
+        if (newQuestion === null) return;
 
 
         const newMarks =
@@ -1423,9 +1152,7 @@ async function editEntry(id) {
             );
 
 
-        if (newMarks === null) {
-            return;
-        }
+        if (newMarks === null) return;
 
 
         const newOperation =
@@ -1435,9 +1162,7 @@ async function editEntry(id) {
             );
 
 
-        if (newOperation === null) {
-            return;
-        }
+        if (newOperation === null) return;
 
 
         const payload = {
@@ -1474,9 +1199,7 @@ async function editEntry(id) {
                     },
 
                     body:
-                        JSON.stringify(
-                            payload
-                        )
+                        JSON.stringify(payload)
                 }
             );
 
@@ -1503,9 +1226,8 @@ async function editEntry(id) {
 
         await refreshCoordinatorData();
 
-    }
 
-    catch (error) {
+    } catch (error) {
 
         scoreMessage.textContent =
             `❌ ${error.message}`;
@@ -1515,10 +1237,9 @@ async function editEntry(id) {
 }
 
 
-
-/* =========================================================
+/* =========================
    DELETE ENTRY
-========================================================= */
+========================= */
 
 async function deleteEntry(id) {
 
@@ -1527,9 +1248,7 @@ async function deleteEntry(id) {
             "Delete this score entry? This will change the team total."
         )
     ) {
-
         return;
-
     }
 
 
@@ -1564,18 +1283,10 @@ async function deleteEntry(id) {
             "🗑 Score entry deleted.";
 
 
-        /*
-         * IMPORTANT:
-         *
-         * Delete does NOT trigger applause.
-         */
-
-
         await refreshCoordinatorData();
 
-    }
 
-    catch (error) {
+    } catch (error) {
 
         scoreMessage.textContent =
             `❌ ${error.message}`;
@@ -1585,10 +1296,9 @@ async function deleteEntry(id) {
 }
 
 
-
-/* =========================================================
+/* =========================
    AUTHORIZED FETCH
-========================================================= */
+========================= */
 
 async function authorizedFetch(
     url,
@@ -1611,21 +1321,17 @@ async function authorizedFetch(
         url,
         {
             ...options,
-
             headers,
-
-            cache:
-                "no-store"
+            cache: "no-store"
         }
     );
 
 }
 
 
-
-/* =========================================================
+/* =========================
    JSON RESPONSE
-========================================================= */
+========================= */
 
 async function readJsonResponse(
     response
@@ -1635,20 +1341,14 @@ async function readJsonResponse(
         await response.text();
 
 
-    if (!text) {
-        return {};
-    }
+    if (!text) return {};
 
 
     try {
 
-        return JSON.parse(
-            text
-        );
+        return JSON.parse(text);
 
-    }
-
-    catch {
+    } catch {
 
         return {
             detail:
@@ -1661,10 +1361,9 @@ async function readJsonResponse(
 }
 
 
-
-/* =========================================================
+/* =========================
    SELECT HELPERS
-========================================================= */
+========================= */
 
 function populateSelect(
     select,
@@ -1675,13 +1374,9 @@ function populateSelect(
         values
             .map(
                 (value) => `
-
-                    <option
-                        value="${escapeHtml(value)}"
-                    >
+                    <option value="${escapeHtml(value)}">
                         ${escapeHtml(value)}
                     </option>
-
                 `
             )
             .join("");
@@ -1689,27 +1384,42 @@ function populateSelect(
 }
 
 
-
-/* =========================================================
+/* =========================
    HTML ESCAPING
-========================================================= */
+========================= */
 
 function escapeHtml(value) {
 
     return String(value)
 
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 
 }
 
-
 </script>
 
-
 </body>
-
 </html>

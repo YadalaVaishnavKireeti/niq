@@ -269,11 +269,11 @@ button {
 
     font-size: 28px;
 
-    color: #ffffff;
+    color: #000000;
 }
 
 .eyebrow {
-    color: #ffffff;
+    color: #000000;
 
     font-size: 12px;
 
@@ -285,7 +285,7 @@ button {
 }
 
 #last-updated {
-    color: #ffffff;
+    color: #000000;
 
     font-size: 12px;
 }
