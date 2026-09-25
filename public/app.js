@@ -22,38 +22,154 @@ let pendingClapEventId = null;
    DASHBOARD SOUND UNLOCK
 ========================================================= */
 
+/*
+ * Use Web Audio instead of relying on a remote HTMLAudioElement
+ * to autoplay. Browsers are much stricter about remote media
+ * playback, while an AudioContext explicitly resumed from a
+ * real dashboard click can be used later for coordinator-triggered
+ * applause.
+ */
+
+const AudioContextClass =
+    window.AudioContext ||
+    window.webkitAudioContext;
+
+const clapAudioContext =
+    AudioContextClass
+        ? new AudioContextClass()
+        : null;
+
+let clapAudioBuffer = null;
+let clapAudioLoading = null;
+let activeClapSource = null;
+
+
+async function loadClapAudioBuffer() {
+
+    if (clapAudioBuffer) {
+        return clapAudioBuffer;
+    }
+
+    if (clapAudioLoading) {
+        return clapAudioLoading;
+    }
+
+    clapAudioLoading = (async () => {
+
+        const response =
+            await fetch(
+                "/audio/clap.mp3",
+                { cache: "no-store" }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Unable to load clap audio (HTTP ${response.status}).`
+            );
+        }
+
+        const audioData =
+            await response.arrayBuffer();
+
+        if (!clapAudioContext) {
+            throw new Error(
+                "Web Audio is not supported by this browser."
+            );
+        }
+
+        clapAudioBuffer =
+            await clapAudioContext.decodeAudioData(
+                audioData
+            );
+
+        return clapAudioBuffer;
+
+    })();
+
+    try {
+        return await clapAudioLoading;
+    } finally {
+        clapAudioLoading = null;
+    }
+}
+
+
 function setupDashboardSound() {
-    const button = document.getElementById("dashboard-sound-enable");
+
+    const button =
+        document.getElementById(
+            "dashboard-sound-enable"
+        );
 
     if (!button) {
         return;
     }
 
-    button.addEventListener("click", async () => {
-        try {
-            clapAudio.currentTime = 0;
-            await clapAudio.play();
+    button.addEventListener(
+        "click",
+        async () => {
 
-            // Stop the test playback immediately after the browser
-            // grants this page permission to use audio.
-            clapAudio.pause();
-            clapAudio.currentTime = 0;
-
-            dashboardSoundEnabled = true;
-            button.textContent = "🔊 Sound Ready";
-            button.classList.add("sound-ready");
             button.disabled = true;
-            button.setAttribute("aria-label", "Dashboard sound is ready");
+            button.textContent =
+                "⏳ Preparing Sound...";
 
-            setTimeout(() => {
-                button.classList.add("sound-ready-hidden");
-            }, 1200);
+            try {
 
-        } catch (error) {
-            console.warn("Dashboard audio is not unlocked:", error);
-            button.textContent = "🔊 Tap to Enable Sound";
+                if (!clapAudioContext) {
+                    throw new Error(
+                        "This browser does not support Web Audio."
+                    );
+                }
+
+                /*
+                 * Resume MUST happen from this user gesture.
+                 */
+                await clapAudioContext.resume();
+
+                /*
+                 * Decode the actual MP3 now, while the page has
+                 * an explicit user interaction.
+                 */
+                await loadClapAudioBuffer();
+
+                dashboardSoundEnabled = true;
+
+                button.textContent =
+                    "🔊 Sound Ready";
+
+                button.classList.add(
+                    "sound-ready"
+                );
+
+                button.setAttribute(
+                    "aria-label",
+                    "Dashboard sound is ready"
+                );
+
+                setTimeout(() => {
+                    button.classList.add(
+                        "sound-ready-hidden"
+                    );
+                }, 1200);
+
+                console.log(
+                    "Dashboard sound is ready for remote applause."
+                );
+
+            } catch (error) {
+
+                dashboardSoundEnabled = false;
+                button.disabled = false;
+                button.textContent =
+                    "🔊 Tap to Enable Sound";
+
+                console.error(
+                    "Dashboard audio could not be enabled:",
+                    error
+                );
+            }
         }
-    });
+    );
 }
 
 
@@ -62,58 +178,95 @@ function setupDashboardSound() {
 ========================================================= */
 
 async function playRemoteClap(eventId) {
-    if (clapPlaying || pendingClapEventId === eventId) {
+
+    if (
+        clapPlaying ||
+        pendingClapEventId === eventId
+    ) {
         return;
     }
 
     if (!dashboardSoundEnabled) {
-        // Do not mark the event completed. Once the dashboard sound
-        // is enabled, the same pending event can still be played.
         return;
     }
 
     clapPlaying = true;
     pendingClapEventId = eventId;
 
+    let source = null;
+
     try {
-        clapAudio.currentTime = 0;
-        await clapAudio.play();
+
+        if (!clapAudioContext) {
+            throw new Error(
+                "Web Audio is not supported."
+            );
+        }
 
         /*
-         * The coordinator is switched OFF only after this event's
-         * audio has completely finished on the dashboard PC.
+         * The browser may suspend an AudioContext after a while,
+         * so resume it before every remote clap as an extra guard.
          */
-        await new Promise((resolve) => {
-            const onEnded = () => {
-                clapAudio.removeEventListener("ended", onEnded);
-                resolve();
-            };
+        await clapAudioContext.resume();
 
-            clapAudio.addEventListener("ended", onEnded, { once: true });
+        const buffer =
+            await loadClapAudioBuffer();
 
-            // Safety fallback in case a browser fails to emit "ended".
-            setTimeout(() => {
-                clapAudio.removeEventListener("ended", onEnded);
-                resolve();
-            }, Math.max(5000, (clapAudio.duration || 2) * 1000 + 1000));
+        source =
+            clapAudioContext.createBufferSource();
+
+        source.buffer = buffer;
+        source.connect(
+            clapAudioContext.destination
+        );
+
+        activeClapSource = source;
+
+        /*
+         * The coordinator is released only when the dashboard
+         * AudioBufferSourceNode actually reaches its end.
+         */
+        await new Promise((resolve, reject) => {
+
+            source.onended = resolve;
+
+            try {
+                source.start(0);
+            } catch (error) {
+                reject(error);
+            }
         });
 
-        await fetch("/api/clap/complete", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                event_id: eventId
-            }),
-            cache: "no-store"
-        });
+        await fetch(
+            "/api/clap/complete",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    event_id: eventId
+                }),
+                cache: "no-store"
+            }
+        );
 
         lastCompletedClapId = eventId;
 
     } catch (error) {
-        console.warn("Remote clap could not be played:", error);
+
+        console.error(
+            "Remote clap could not be played:",
+            error
+        );
+
     } finally {
+
+        if (source) {
+            source.onended = null;
+        }
+
+        activeClapSource = null;
         clapPlaying = false;
         pendingClapEventId = null;
     }
