@@ -6,366 +6,1420 @@
     <title>Coordinator Console</title>
     <link rel="stylesheet" href="/style.css">
 </head>
+
 <body>
+
 <main class="coordinator-page">
+
     <section class="coordinator-header">
         <div class="eyebrow">ADMINISTRATION</div>
         <h1>🎯 Score Entry Console</h1>
         <p>Manage live quiz scores and the active round.</p>
     </section>
 
+
     <section id="login-section" class="control-card">
+
         <h2>Coordinator Access</h2>
-        <p class="muted">Enter the coordinator PIN to continue.</p>
+
+        <p class="muted">
+            Enter the coordinator PIN to continue.
+        </p>
+
         <form id="login-form">
+
             <label for="pin">Coordinator PIN</label>
-            <input type="password" id="pin" placeholder="Enter PIN" autocomplete="off" required>
-            <button type="submit">🔐 Unlock Console</button>
+
+            <input
+                type="password"
+                id="pin"
+                placeholder="Enter PIN"
+                autocomplete="off"
+                required
+            >
+
+            <button type="submit">
+                🔐 Unlock Console
+            </button>
+
         </form>
+
         <div id="login-message" class="message"></div>
+
     </section>
+
 
     <section id="console-section" class="hidden">
+
+
+        <!-- CONTEST CONTROLS -->
+
         <div class="control-card">
+
             <div class="console-top">
+
                 <div>
                     <h2>Contest Controls</h2>
-                    <p class="muted">Set the round shown to the audience before entering scores.</p>
+
+                    <p class="muted">
+                        Set the round shown to the audience before entering scores.
+                    </p>
                 </div>
-                <button id="download-button" class="secondary-button" type="button">📥 Excel</button>
+
+                <button
+                    id="download-button"
+                    class="secondary-button"
+                    type="button"
+                >
+                    📥 Excel
+                </button>
+
             </div>
+
+
             <form id="round-form">
-                <label for="active-round">Live Round</label>
-                <select id="active-round" required></select>
-                <button type="submit">📡 Set Live Round</button>
+
+                <label for="active-round">
+                    Live Round
+                </label>
+
+                <select
+                    id="active-round"
+                    required
+                ></select>
+
+                <button type="submit">
+                    📡 Set Live Round
+                </button>
+
             </form>
+
             <div id="round-message" class="message"></div>
+
         </div>
 
-        <div class="control-card">
-            <h2>Enter Score</h2>
-            <p class="muted">The live round is used automatically. Select the question and add or subtract marks.</p>
-            <form id="score-form">
-                <label for="team">Team</label>
-                <select id="team" required></select>
 
-                <label for="question">Question</label>
-                <select id="question" required></select>
+        <!-- AUDIO CONTROL -->
+
+        <div class="control-card audio-control-card">
+
+            <div class="audio-control-content">
+
+                <div>
+                    <span class="eyebrow">
+                        SOUND CONTROL
+                    </span>
+
+                    <h2>
+                        👏 Clapping Audio
+                    </h2>
+
+                    <p class="muted">
+                        Play applause automatically after a successful score entry.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    id="clap-toggle"
+                    class="clap-toggle-button"
+                >
+                    🔊 Clapping ON
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- SCORE ENTRY -->
+
+        <div class="control-card">
+
+            <h2>Enter Score</h2>
+
+            <p class="muted">
+                The live round is used automatically.
+                Select the question and add or subtract marks.
+            </p>
+
+
+            <form id="score-form">
+
+                <label for="team">
+                    Team
+                </label>
+
+                <select
+                    id="team"
+                    required
+                ></select>
+
+
+                <label for="question">
+                    Question
+                </label>
+
+                <select
+                    id="question"
+                    required
+                ></select>
+
 
                 <div class="live-round-note">
-                    Scores will be recorded against: <strong id="entry-round-label">Loading...</strong>
+
+                    Scores will be recorded against:
+                    <strong id="entry-round-label">
+                        Loading...
+                    </strong>
+
                 </div>
 
-                <label for="marks">Marks</label>
-                <input type="number" id="marks" min="1" max="100" step="1" placeholder="Enter marks" required>
+
+                <label for="marks">
+                    Marks
+                </label>
+
+                <input
+                    type="number"
+                    id="marks"
+                    min="1"
+                    max="100"
+                    step="1"
+                    placeholder="Enter marks"
+                    required
+                >
+
 
                 <div class="score-action-buttons">
-                    <button type="submit" id="add-score" class="add-button" data-operation="add">➕ Add Marks</button>
-                    <button type="submit" id="subtract-score" class="subtract-button" data-operation="subtract">➖ Subtract Marks</button>
+
+                    <button
+                        type="submit"
+                        id="add-score"
+                        class="add-button"
+                        data-operation="add"
+                    >
+                        ➕ Add Marks
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="subtract-score"
+                        class="subtract-button"
+                        data-operation="subtract"
+                    >
+                        ➖ Subtract Marks
+                    </button>
+
                 </div>
+
             </form>
+
             <div id="score-message" class="message"></div>
+
         </div>
+
+
+        <!-- TEAM TOTALS -->
 
         <div class="control-card">
+
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">LIVE TOTALS</span>
-                    <h2>Team Totals</h2>
+
+                    <span class="eyebrow">
+                        LIVE TOTALS
+                    </span>
+
+                    <h2>
+                        Team Totals
+                    </h2>
+
                 </div>
+
             </div>
-            <div id="team-totals" class="team-totals-grid">Loading...</div>
+
+            <div
+                id="team-totals"
+                class="team-totals-grid"
+            >
+                Loading...
+            </div>
+
         </div>
 
-        <div id="entries-section" class="control-card">
+
+        <!-- HISTORY -->
+
+        <div
+            id="entries-section"
+            class="control-card"
+        >
+
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">SCORE HISTORY</span>
-                    <h2>Recent Entries</h2>
+
+                    <span class="eyebrow">
+                        SCORE HISTORY
+                    </span>
+
+                    <h2>
+                        Recent Entries
+                    </h2>
+
                 </div>
+
             </div>
-            <div id="recent-entries">Loading...</div>
+
+            <div id="recent-entries">
+                Loading...
+            </div>
+
         </div>
+
     </section>
+
 </main>
 
+
+<!-- CLAPPING AUDIO -->
+
+<audio
+    id="clap-audio"
+    preload="auto"
+>
+    <source
+        src="/audio/clap.mp3"
+        type="audio/mpeg"
+    >
+</audio>
+
+
 <script>
-const loginSection = document.getElementById("login-section");
-const consoleSection = document.getElementById("console-section");
-const loginForm = document.getElementById("login-form");
-const roundForm = document.getElementById("round-form");
-const scoreForm = document.getElementById("score-form");
-const pinInput = document.getElementById("pin");
-const loginMessage = document.getElementById("login-message");
-const roundMessage = document.getElementById("round-message");
-const scoreMessage = document.getElementById("score-message");
-const teamSelect = document.getElementById("team");
-const questionSelect = document.getElementById("question");
-const activeRoundSelect = document.getElementById("active-round");
-const entryRoundLabel = document.getElementById("entry-round-label");
-const marksInput = document.getElementById("marks");
-const recentEntries = document.getElementById("recent-entries");
-const teamTotals = document.getElementById("team-totals");
-const downloadButton = document.getElementById("download-button");
+
+const loginSection =
+    document.getElementById("login-section");
+
+const consoleSection =
+    document.getElementById("console-section");
+
+const loginForm =
+    document.getElementById("login-form");
+
+const roundForm =
+    document.getElementById("round-form");
+
+const scoreForm =
+    document.getElementById("score-form");
+
+const pinInput =
+    document.getElementById("pin");
+
+const loginMessage =
+    document.getElementById("login-message");
+
+const roundMessage =
+    document.getElementById("round-message");
+
+const scoreMessage =
+    document.getElementById("score-message");
+
+const teamSelect =
+    document.getElementById("team");
+
+const questionSelect =
+    document.getElementById("question");
+
+const activeRoundSelect =
+    document.getElementById("active-round");
+
+const entryRoundLabel =
+    document.getElementById("entry-round-label");
+
+const marksInput =
+    document.getElementById("marks");
+
+const recentEntries =
+    document.getElementById("recent-entries");
+
+const teamTotals =
+    document.getElementById("team-totals");
+
+const downloadButton =
+    document.getElementById("download-button");
+
+const clapToggle =
+    document.getElementById("clap-toggle");
+
+const clapAudio =
+    document.getElementById("clap-audio");
+
+
 let coordinatorPin = "";
+
 let teams = [];
+
 let currentLiveRound = "";
 
-loginForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const pin = pinInput.value.trim();
-    if (!pin) return;
-    loginMessage.textContent = "Checking access...";
+let clapEnabled =
+    localStorage.getItem("clapEnabled") !== "false";
 
-    try {
-        const response = await fetch("/api/config", {
-            headers: { "X-Coordinator-PIN": pin },
-            cache: "no-store",
-        });
-        const data = await readJsonResponse(response);
-        if (!response.ok) throw new Error(data.detail || "Invalid PIN.");
 
-        coordinatorPin = pin;
-        teams = data.teams;
-        populateSelect(teamSelect, teams);
-        populateSelect(questionSelect, data.questions || Array.from({length: 12}, (_, i) => i + 1));
-        populateSelect(activeRoundSelect, data.rounds);
+/* =========================
+   CLAPPING CONTROL
+========================= */
 
-        loginSection.classList.add("hidden");
-        consoleSection.classList.remove("hidden");
-        await refreshCoordinatorData();
-    } catch (error) {
-        loginMessage.textContent = `❌ ${error.message}`;
+function updateClapButton() {
+
+    if (clapEnabled) {
+
+        clapToggle.textContent =
+            "🔊 Clapping ON";
+
+        clapToggle.classList.add(
+            "clap-enabled"
+        );
+
+        clapToggle.classList.remove(
+            "clap-disabled"
+        );
+
+    } else {
+
+        clapToggle.textContent =
+            "🔇 Clapping OFF";
+
+        clapToggle.classList.add(
+            "clap-disabled"
+        );
+
+        clapToggle.classList.remove(
+            "clap-enabled"
+        );
     }
-});
+}
 
-roundForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    roundMessage.textContent = "Updating live round...";
-    try {
-        const response = await authorizedFetch("/api/current-round", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ round: activeRoundSelect.value }),
-        });
-        const data = await readJsonResponse(response);
-        if (!response.ok) throw new Error(data.detail || "Unable to set round.");
-        roundMessage.textContent = `📡 Live round set to ${data.round}.`;
-        await refreshCoordinatorData();
-    } catch (error) {
-        roundMessage.textContent = `❌ ${error.message}`;
-    }
-});
 
-scoreForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const operation = event.submitter?.dataset.operation || "add";
-    const team = teamSelect.value;
-    const question = Number(questionSelect.value);
-    const marks = Number(marksInput.value);
+function playClap() {
 
-    if (!team || !question || !Number.isInteger(marks) || marks < 1 || marks > 100) {
-        scoreMessage.textContent = "Please select a team/question and enter marks from 1 to 100.";
+    if (!clapEnabled) {
         return;
     }
 
-    const buttons = scoreForm.querySelectorAll("button[type='submit']");
-    buttons.forEach((button) => button.disabled = true);
-
     try {
-        const response = await authorizedFetch("/api/scores", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                team,
-                round: currentLiveRound,
-                question,
-                marks,
-                operation,
-            }),
-        });
-        const data = await readJsonResponse(response);
-        if (!response.ok) throw new Error(data.detail || "Unable to submit score.");
 
-        scoreMessage.textContent = operation === "add"
-            ? `✅ ${marks} points added to ${team}.`
-            : `✅ ${marks} points subtracted from ${team}.`;
-        marksInput.value = "";
-        await refreshCoordinatorData();
-    } catch (error) {
-        scoreMessage.textContent = `❌ ${error.message}`;
-    } finally {
-        buttons.forEach((button) => button.disabled = false);
-    }
-});
+        clapAudio.currentTime = 0;
 
-downloadButton.addEventListener("click", async () => {
-    try {
-        const response = await authorizedFetch("/api/export");
-        if (!response.ok) {
-            const data = await readJsonResponse(response);
-            throw new Error(data.detail || "Unable to generate Excel file.");
+        const playPromise =
+            clapAudio.play();
+
+        if (playPromise !== undefined) {
+
+            playPromise.catch((error) => {
+
+                console.warn(
+                    "Clapping audio could not play:",
+                    error
+                );
+
+            });
+
         }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "quiz_scorebook.xlsx";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
+
     } catch (error) {
-        scoreMessage.textContent = `❌ ${error.message}`;
+
+        console.warn(
+            "Clapping audio error:",
+            error
+        );
+
     }
-});
+}
+
+
+clapToggle.addEventListener(
+    "click",
+    () => {
+
+        clapEnabled = !clapEnabled;
+
+        localStorage.setItem(
+            "clapEnabled",
+            String(clapEnabled)
+        );
+
+        updateClapButton();
+
+    }
+);
+
+
+updateClapButton();
+
+
+/* =========================
+   LOGIN
+========================= */
+
+loginForm.addEventListener(
+    "submit",
+    async (event) => {
+
+        event.preventDefault();
+
+        const pin =
+            pinInput.value.trim();
+
+        if (!pin) return;
+
+        loginMessage.textContent =
+            "Checking access...";
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/config",
+                    {
+                        headers: {
+                            "X-Coordinator-PIN": pin
+                        },
+                        cache: "no-store"
+                    }
+                );
+
+
+            const data =
+                await readJsonResponse(response);
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Invalid PIN."
+                );
+
+            }
+
+
+            coordinatorPin = pin;
+
+            teams = data.teams;
+
+
+            populateSelect(
+                teamSelect,
+                teams
+            );
+
+
+            populateSelect(
+                questionSelect,
+                data.questions ||
+                Array.from(
+                    { length: 12 },
+                    (_, i) => i + 1
+                )
+            );
+
+
+            populateSelect(
+                activeRoundSelect,
+                data.rounds
+            );
+
+
+            loginSection.classList.add(
+                "hidden"
+            );
+
+            consoleSection.classList.remove(
+                "hidden"
+            );
+
+
+            await refreshCoordinatorData();
+
+
+        } catch (error) {
+
+            loginMessage.textContent =
+                `❌ ${error.message}`;
+
+        }
+
+    }
+);
+
+
+/* =========================
+   LIVE ROUND
+========================= */
+
+roundForm.addEventListener(
+    "submit",
+    async (event) => {
+
+        event.preventDefault();
+
+        roundMessage.textContent =
+            "Updating live round...";
+
+
+        try {
+
+            const response =
+                await authorizedFetch(
+                    "/api/current-round",
+                    {
+                        method: "PUT",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            round:
+                                activeRoundSelect.value
+                        })
+                    }
+                );
+
+
+            const data =
+                await readJsonResponse(
+                    response
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Unable to set round."
+                );
+
+            }
+
+
+            roundMessage.textContent =
+                `📡 Live round set to ${data.round}.`;
+
+
+            await refreshCoordinatorData();
+
+
+        } catch (error) {
+
+            roundMessage.textContent =
+                `❌ ${error.message}`;
+
+        }
+
+    }
+);
+
+
+/* =========================
+   SCORE ENTRY
+========================= */
+
+scoreForm.addEventListener(
+    "submit",
+    async (event) => {
+
+        event.preventDefault();
+
+
+        const operation =
+            event.submitter?.dataset.operation ||
+            "add";
+
+        const team =
+            teamSelect.value;
+
+        const question =
+            Number(questionSelect.value);
+
+        const marks =
+            Number(marksInput.value);
+
+
+        if (
+            !team ||
+            !question ||
+            !Number.isInteger(marks) ||
+            marks < 1 ||
+            marks > 100
+        ) {
+
+            scoreMessage.textContent =
+                "Please select a team/question and enter marks from 1 to 100.";
+
+            return;
+
+        }
+
+
+        const buttons =
+            scoreForm.querySelectorAll(
+                "button[type='submit']"
+            );
+
+
+        buttons.forEach(
+            (button) =>
+                button.disabled = true
+        );
+
+
+        try {
+
+            const response =
+                await authorizedFetch(
+                    "/api/scores",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            team,
+
+                            round:
+                                currentLiveRound,
+
+                            question,
+
+                            marks,
+
+                            operation
+
+                        })
+                    }
+                );
+
+
+            const data =
+                await readJsonResponse(
+                    response
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.detail ||
+                    "Unable to submit score."
+                );
+
+            }
+
+
+            scoreMessage.textContent =
+                operation === "add"
+                    ? `✅ ${marks} points added to ${team}.`
+                    : `✅ ${marks} points subtracted from ${team}.`;
+
+
+            marksInput.value = "";
+
+
+            /* PLAY APPLAUSE */
+
+            playClap();
+
+
+            await refreshCoordinatorData();
+
+
+        } catch (error) {
+
+            scoreMessage.textContent =
+                `❌ ${error.message}`;
+
+        } finally {
+
+            buttons.forEach(
+                (button) =>
+                    button.disabled = false
+            );
+
+        }
+
+    }
+);
+
+
+/* =========================
+   EXCEL DOWNLOAD
+========================= */
+
+downloadButton.addEventListener(
+    "click",
+    async () => {
+
+        try {
+
+            const response =
+                await authorizedFetch(
+                    "/api/export"
+                );
+
+
+            if (!response.ok) {
+
+                const data =
+                    await readJsonResponse(
+                        response
+                    );
+
+                throw new Error(
+                    data.detail ||
+                    "Unable to generate Excel file."
+                );
+
+            }
+
+
+            const blob =
+                await response.blob();
+
+
+            const url =
+                window.URL.createObjectURL(
+                    blob
+                );
+
+
+            const link =
+                document.createElement("a");
+
+
+            link.href = url;
+
+            link.download =
+                "quiz_scorebook.xlsx";
+
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+
+            window.URL.revokeObjectURL(url);
+
+
+        } catch (error) {
+
+            scoreMessage.textContent =
+                `❌ ${error.message}`;
+
+        }
+
+    }
+);
+
+
+/* =========================
+   REFRESH DATA
+========================= */
 
 async function refreshCoordinatorData() {
-    const response = await authorizedFetch("/api/current-round");
-    const data = await readJsonResponse(response);
-    if (!response.ok) throw new Error(data.detail || "Unable to load live round.");
 
-    currentLiveRound = data.round;
-    activeRoundSelect.value = currentLiveRound;
-    entryRoundLabel.textContent = currentLiveRound;
+    const response =
+        await authorizedFetch(
+            "/api/current-round"
+        );
 
-    await Promise.all([loadRecentEntries(), loadTeamTotals()]);
+
+    const data =
+        await readJsonResponse(
+            response
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.detail ||
+            "Unable to load live round."
+        );
+
+    }
+
+
+    currentLiveRound =
+        data.round;
+
+
+    activeRoundSelect.value =
+        currentLiveRound;
+
+
+    entryRoundLabel.textContent =
+        currentLiveRound;
+
+
+    await Promise.all([
+        loadRecentEntries(),
+        loadTeamTotals()
+    ]);
+
 }
+
+
+/* =========================
+   SCORE HISTORY
+========================= */
 
 async function loadRecentEntries() {
-    try {
-        const response = await authorizedFetch("/api/scores");
-        const entries = await readJsonResponse(response);
-        if (!response.ok) throw new Error(entries.detail || "Unable to load history.");
 
-        if (!entries.length) {
-            recentEntries.innerHTML = `<p class="muted">No scores entered yet.</p>`;
-            return;
+    try {
+
+        const response =
+            await authorizedFetch(
+                "/api/scores"
+            );
+
+
+        const entries =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                entries.detail ||
+                "Unable to load history."
+            );
+
         }
 
-        recentEntries.innerHTML = entries.slice(0, 30).map((entry) => {
-            const sign = entry.operation === "subtract" ? "−" : "+";
-            return `
-                <div class="entry-row history-row">
-                    <div class="history-main">
-                        <strong>${escapeHtml(entry.team)}</strong>
-                        <span>${escapeHtml(entry.round)} · Question ${entry.question}</span>
-                        <span>${new Date(entry.created_at).toLocaleString()}</span>
-                    </div>
-                    <strong class="entry-score ${entry.operation === "subtract" ? "negative" : ""}">${sign}${entry.marks}</strong>
-                    <div class="history-actions">
-                        <button type="button" class="small-action" onclick="editEntry(${entry.id})">✏️ Edit</button>
-                        <button type="button" class="small-action delete-action" onclick="deleteEntry(${entry.id})">🗑 Delete</button>
-                    </div>
-                </div>`;
-        }).join("");
+
+        if (!entries.length) {
+
+            recentEntries.innerHTML =
+                `<p class="muted">
+                    No scores entered yet.
+                </p>`;
+
+            return;
+
+        }
+
+
+        recentEntries.innerHTML =
+            entries
+                .slice(0, 30)
+                .map((entry) => {
+
+                    const sign =
+                        entry.operation === "subtract"
+                            ? "−"
+                            : "+";
+
+
+                    return `
+
+                        <div class="entry-row history-row">
+
+                            <div class="history-main">
+
+                                <strong>
+                                    ${escapeHtml(entry.team)}
+                                </strong>
+
+                                <span>
+                                    ${escapeHtml(entry.round)}
+                                    · Question ${entry.question}
+                                </span>
+
+                                <span>
+                                    ${new Date(
+                                        entry.created_at
+                                    ).toLocaleString()}
+                                </span>
+
+                            </div>
+
+
+                            <strong
+                                class="entry-score ${
+                                    entry.operation === "subtract"
+                                        ? "negative"
+                                        : ""
+                                }"
+                            >
+                                ${sign}${entry.marks}
+                            </strong>
+
+
+                            <div class="history-actions">
+
+                                <button
+                                    type="button"
+                                    class="small-action"
+                                    onclick="editEntry(${entry.id})"
+                                >
+                                    ✏️ Edit
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="small-action delete-action"
+                                    onclick="deleteEntry(${entry.id})"
+                                >
+                                    🗑 Delete
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                })
+                .join("");
+
     } catch (error) {
-        recentEntries.textContent = error.message;
+
+        recentEntries.textContent =
+            error.message;
+
     }
+
 }
+
+
+/* =========================
+   TEAM TOTALS
+========================= */
 
 async function loadTeamTotals() {
-    try {
-        const response = await authorizedFetch("/api/team-totals");
-        const totals = await readJsonResponse(response);
-        if (!response.ok) throw new Error(totals.detail || "Unable to load team totals.");
 
-        teamTotals.innerHTML = totals.map((team, index) => `
-            <div class="total-team-card total-colour-${index + 1}">
-                <span>${escapeHtml(team.team)}</span>
-                <strong>${team.total_score}</strong>
-                <small>POINTS</small>
-            </div>`).join("");
+    try {
+
+        const response =
+            await authorizedFetch(
+                "/api/team-totals"
+            );
+
+
+        const totals =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                totals.detail ||
+                "Unable to load team totals."
+            );
+
+        }
+
+
+        teamTotals.innerHTML =
+            totals
+                .map((team, index) => `
+
+                    <div
+                        class="total-team-card total-colour-${index + 1}"
+                    >
+
+                        <span>
+                            ${escapeHtml(team.team)}
+                        </span>
+
+                        <strong>
+                            ${team.total_score}
+                        </strong>
+
+                        <small>
+                            POINTS
+                        </small>
+
+                    </div>
+
+                `)
+                .join("");
+
     } catch (error) {
-        teamTotals.textContent = error.message;
+
+        teamTotals.textContent =
+            error.message;
+
     }
+
 }
+
+
+/* =========================
+   EDIT ENTRY
+========================= */
 
 async function editEntry(id) {
-    try {
-        const response = await authorizedFetch("/api/scores");
-        const entries = await readJsonResponse(response);
-        if (!response.ok) throw new Error(entries.detail || "Unable to load entry.");
-        const entry = entries.find((item) => item.id === id);
-        if (!entry) throw new Error("Score entry not found.");
 
-        const newTeam = prompt("Team:", entry.team);
+    try {
+
+        const response =
+            await authorizedFetch(
+                "/api/scores"
+            );
+
+
+        const entries =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                entries.detail ||
+                "Unable to load entry."
+            );
+
+        }
+
+
+        const entry =
+            entries.find(
+                (item) => item.id === id
+            );
+
+
+        if (!entry) {
+
+            throw new Error(
+                "Score entry not found."
+            );
+
+        }
+
+
+        const newTeam =
+            prompt(
+                "Team:",
+                entry.team
+            );
+
+
         if (newTeam === null) return;
-        const newRound = prompt("Round:", entry.round);
+
+
+        const newRound =
+            prompt(
+                "Round:",
+                entry.round
+            );
+
+
         if (newRound === null) return;
-        const newQuestion = prompt("Question (1-12):", entry.question);
+
+
+        const newQuestion =
+            prompt(
+                "Question (1-12):",
+                entry.question
+            );
+
+
         if (newQuestion === null) return;
-        const newMarks = prompt("Marks:", entry.marks);
+
+
+        const newMarks =
+            prompt(
+                "Marks:",
+                entry.marks
+            );
+
+
         if (newMarks === null) return;
-        const newOperation = prompt("Type 'add' or 'subtract':", entry.operation);
+
+
+        const newOperation =
+            prompt(
+                "Type 'add' or 'subtract':",
+                entry.operation
+            );
+
+
         if (newOperation === null) return;
 
+
         const payload = {
-            team: newTeam.trim(),
-            round: newRound.trim(),
-            question: Number(newQuestion),
-            marks: Number(newMarks),
-            operation: newOperation.trim().toLowerCase(),
+
+            team:
+                newTeam.trim(),
+
+            round:
+                newRound.trim(),
+
+            question:
+                Number(newQuestion),
+
+            marks:
+                Number(newMarks),
+
+            operation:
+                newOperation
+                    .trim()
+                    .toLowerCase()
+
         };
 
-        const updateResponse = await authorizedFetch(`/api/scores/${id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-        const data = await readJsonResponse(updateResponse);
-        if (!updateResponse.ok) throw new Error(data.detail || "Unable to edit entry.");
 
-        scoreMessage.textContent = "✅ Score entry updated.";
+        const updateResponse =
+            await authorizedFetch(
+                `/api/scores/${id}`,
+                {
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(payload)
+                }
+            );
+
+
+        const data =
+            await readJsonResponse(
+                updateResponse
+            );
+
+
+        if (!updateResponse.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Unable to edit entry."
+            );
+
+        }
+
+
+        scoreMessage.textContent =
+            "✅ Score entry updated.";
+
+
         await refreshCoordinatorData();
+
+
     } catch (error) {
-        scoreMessage.textContent = `❌ ${error.message}`;
+
+        scoreMessage.textContent =
+            `❌ ${error.message}`;
+
     }
+
 }
+
+
+/* =========================
+   DELETE ENTRY
+========================= */
 
 async function deleteEntry(id) {
-    if (!confirm("Delete this score entry? This will change the team total.")) return;
+
+    if (
+        !confirm(
+            "Delete this score entry? This will change the team total."
+        )
+    ) {
+        return;
+    }
+
+
     try {
-        const response = await authorizedFetch(`/api/scores/${id}`, { method: "DELETE" });
-        const data = await readJsonResponse(response);
-        if (!response.ok) throw new Error(data.detail || "Unable to delete entry.");
-        scoreMessage.textContent = "🗑 Score entry deleted.";
+
+        const response =
+            await authorizedFetch(
+                `/api/scores/${id}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+
+        const data =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "Unable to delete entry."
+            );
+
+        }
+
+
+        scoreMessage.textContent =
+            "🗑 Score entry deleted.";
+
+
         await refreshCoordinatorData();
+
+
     } catch (error) {
-        scoreMessage.textContent = `❌ ${error.message}`;
+
+        scoreMessage.textContent =
+            `❌ ${error.message}`;
+
     }
+
 }
 
-async function authorizedFetch(url, options = {}) {
-    const headers = new Headers(options.headers || {});
-    headers.set("X-Coordinator-PIN", coordinatorPin);
-    return fetch(url, { ...options, headers, cache: "no-store" });
+
+/* =========================
+   AUTHORIZED FETCH
+========================= */
+
+async function authorizedFetch(
+    url,
+    options = {}
+) {
+
+    const headers =
+        new Headers(
+            options.headers || {}
+        );
+
+
+    headers.set(
+        "X-Coordinator-PIN",
+        coordinatorPin
+    );
+
+
+    return fetch(
+        url,
+        {
+            ...options,
+            headers,
+            cache: "no-store"
+        }
+    );
+
 }
 
-async function readJsonResponse(response) {
-    const text = await response.text();
+
+/* =========================
+   JSON RESPONSE
+========================= */
+
+async function readJsonResponse(
+    response
+) {
+
+    const text =
+        await response.text();
+
+
     if (!text) return {};
+
+
     try {
+
         return JSON.parse(text);
+
     } catch {
-        return { detail: text || `Server returned HTTP ${response.status}.` };
+
+        return {
+            detail:
+                text ||
+                `Server returned HTTP ${response.status}.`
+        };
+
     }
+
 }
 
-function populateSelect(select, values) {
-    select.innerHTML = values.map((value) =>
-        `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
-    ).join("");
+
+/* =========================
+   SELECT HELPERS
+========================= */
+
+function populateSelect(
+    select,
+    values
+) {
+
+    select.innerHTML =
+        values
+            .map(
+                (value) => `
+                    <option value="${escapeHtml(value)}">
+                        ${escapeHtml(value)}
+                    </option>
+                `
+            )
+            .join("");
+
 }
+
+
+/* =========================
+   HTML ESCAPING
+========================= */
 
 function escapeHtml(value) {
+
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
+
 }
+
 </script>
+
 </body>
 </html>

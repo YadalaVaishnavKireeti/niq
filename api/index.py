@@ -14,13 +14,14 @@ TEAMS = [
     "Golconda",
     "⁠Charminar",
     "Chowmahalla",
-    "Barkaas",
+    "King Koti",
     "Kundanbagh",
     "⁠Falaknuma",
     "Parda Gate",
     "Salarjung",
     "Purani haweli",
     "Lakdikapool",
+    "Afzulgunj",
 ]
 
 ROUNDS = [
