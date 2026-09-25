@@ -22,7 +22,6 @@ TEAMS = [
     "Salarjung",
     "Purani haweli",
     "Lakdikapool",
-    "Afzulgunj",
 ]
 
 ROUNDS = [
