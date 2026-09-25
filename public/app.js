@@ -9,9 +9,14 @@ let previousLeaderboardSignature = "";
  * a one-shot clap event from coordinator.html.
  */
 
-const clapAudio = new Audio("/audio/clap.mp3");
-clapAudio.preload = "auto";
-clapAudio.crossOrigin = "anonymous";
+const AudioContextClass =
+    window.AudioContext || window.webkitAudioContext;
+
+const clapAudioContext =
+    AudioContextClass ? new AudioContextClass() : null;
+
+let clapAudioBuffer = null;
+let clapAudioLoading = null;
 
 let dashboardSoundEnabled = false;
 let clapPlaying = false;
@@ -24,119 +29,148 @@ let pendingClapEventId = null;
    DASHBOARD SOUND UNLOCK
 ========================================================= */
 
-/*
- * Use ONE HTMLAudioElement for the whole dashboard.
- *
- * The important browser-policy detail is that the audio element is
- * explicitly played from the real "Enable Sound" click. Once that
- * media element has been successfully started by the user's gesture,
- * later coordinator-triggered play() calls on the SAME element are
- * allowed in normal desktop browsers.
- */
+async function loadClapBuffer() {
+
+    if (clapAudioBuffer) {
+        return clapAudioBuffer;
+    }
+
+    if (clapAudioLoading) {
+        return clapAudioLoading;
+    }
+
+    if (!clapAudioContext) {
+        throw new Error("This browser does not support Web Audio.");
+    }
+
+    clapAudioLoading = fetch(
+        "/audio/clap.mp3?audio=v6",
+        { cache: "no-store" }
+    )
+        .then(async (response) => {
+            if (!response.ok) {
+                throw new Error(
+                    `Clap audio file could not be loaded (HTTP ${response.status}).`
+                );
+            }
+            const bytes = await response.arrayBuffer();
+            return clapAudioContext.decodeAudioData(bytes);
+        })
+        .then((buffer) => {
+            clapAudioBuffer = buffer;
+            return buffer;
+        })
+        .finally(() => {
+            clapAudioLoading = null;
+        });
+
+    return clapAudioLoading;
+}
+
+
+function showSoundError(button, message) {
+    button.disabled = false;
+    button.textContent = "🔊 Enable Dashboard Sound";
+    button.classList.remove("sound-ready");
+    button.classList.remove("sound-ready-hidden");
+    button.setAttribute("aria-label", message);
+    console.error(message);
+}
+
+
 function setupDashboardSound() {
 
     const button =
-        document.getElementById(
-            "dashboard-sound-enable"
-        );
+        document.getElementById("dashboard-sound-enable");
 
     if (!button) {
         return;
     }
 
-    button.addEventListener(
-        "click",
-        async () => {
+    button.addEventListener("click", async () => {
 
-            button.disabled = true;
-            button.textContent =
-                "⏳ Preparing Sound...";
+        if (dashboardSoundEnabled) {
+            return;
+        }
 
-            try {
+        button.disabled = true;
+        button.textContent = "⏳ Preparing Sound...";
 
-                clapAudio.load();
+        try {
 
-                /*
-                 * Start the SAME audio element from the user gesture,
-                 * but muted and immediately pause it. This is the
-                 * browser unlock step; it does not play the clap to
-                 * the audience.
-                 */
-                const originalVolume = clapAudio.volume;
-                const originalMuted = clapAudio.muted;
-
-                clapAudio.muted = true;
-                clapAudio.volume = 0;
-                clapAudio.currentTime = 0;
-
-                await clapAudio.play();
-                clapAudio.pause();
-                clapAudio.currentTime = 0;
-
-                clapAudio.muted = originalMuted;
-                clapAudio.volume = originalVolume;
-
-                /*
-                 * ARM the dashboard at the moment the operator explicitly
-                 * enables sound. Any clap events that existed before this
-                 * moment are stale and must NEVER play.
-                 */
-                const armResponse = await fetch(
-                    "/api/clap/arm",
-                    {
-                        method: "POST",
-                        cache: "no-store"
-                    }
-                );
-
-                if (!armResponse.ok) {
-                    throw new Error(
-                        `Dashboard sound arm failed (HTTP ${armResponse.status}).`
-                    );
-                }
-
-                const armData = await armResponse.json();
-                armedClapBaselineId = Number(armData.baseline_id) || 0;
-                lastCompletedClapId = armedClapBaselineId;
-
-                dashboardSoundEnabled = true;
-
-                button.textContent =
-                    "🔊 Sound Ready";
-
-                button.classList.add(
-                    "sound-ready"
-                );
-
-                button.setAttribute(
-                    "aria-label",
-                    "Dashboard sound is ready"
-                );
-
-                setTimeout(() => {
-                    button.classList.add(
-                        "sound-ready-hidden"
-                    );
-                }, 1200);
-
-                console.log(
-                    "Dashboard sound unlocked successfully."
-                );
-
-            } catch (error) {
-
-                dashboardSoundEnabled = false;
-                button.disabled = false;
-                button.textContent =
-                    "🔊 Tap to Enable Sound";
-
-                console.error(
-                    "Dashboard audio could not be enabled:",
-                    error
+            if (!clapAudioContext) {
+                throw new Error(
+                    "Web Audio is not supported by this browser."
                 );
             }
+
+            /*
+             * This resume() happens directly inside the user's click.
+             * That is the browser's required user-gesture unlock.
+             */
+            await clapAudioContext.resume();
+
+            /*
+             * Decode the REAL clap file before enabling the dashboard.
+             * No sound is started here.
+             */
+            await loadClapBuffer();
+
+            /*
+             * Establish the event boundary only after audio is fully
+             * ready. Events that existed before this point are stale.
+             */
+            const armResponse = await fetch(
+                "/api/clap/arm?v=6",
+                {
+                    method: "POST",
+                    cache: "no-store"
+                }
+            );
+
+            if (!armResponse.ok) {
+                const body = await armResponse.text();
+                throw new Error(
+                    `Dashboard sound could not connect to the clap service (HTTP ${armResponse.status}). ${body}`
+                );
+            }
+
+            const armData = await armResponse.json();
+
+            armedClapBaselineId =
+                Number(armData.baseline_id) || 0;
+
+            lastCompletedClapId =
+                armedClapBaselineId;
+
+            dashboardSoundEnabled = true;
+
+            button.textContent = "🔊 Sound Ready";
+            button.classList.add("sound-ready");
+            button.setAttribute(
+                "aria-label",
+                "Dashboard sound is ready"
+            );
+
+            setTimeout(() => {
+                button.classList.add("sound-ready-hidden");
+            }, 1500);
+
+            console.log(
+                `Dashboard sound ready. Clap baseline: ${armedClapBaselineId}`
+            );
+
+        } catch (error) {
+
+            dashboardSoundEnabled = false;
+            showSoundError(
+                button,
+                `Dashboard sound setup failed: ${error.message || error}`
+            );
+
+            /* Keep the button usable so the operator can try again. */
         }
-    );
+    });
 }
 
 
@@ -148,66 +182,48 @@ async function playRemoteClap(eventId) {
 
     if (
         clapPlaying ||
-        pendingClapEventId === eventId
+        pendingClapEventId === eventId ||
+        !dashboardSoundEnabled ||
+        !clapAudioBuffer
     ) {
-        return;
-    }
-
-    if (!dashboardSoundEnabled) {
         return;
     }
 
     clapPlaying = true;
     pendingClapEventId = eventId;
 
+    let source = null;
+
     try {
 
         /*
-         * Reuse the EXACT audio element that was unlocked by the
-         * dashboard user's click. Do not create a new media element
-         * here, because that can re-trigger autoplay restrictions.
+         * The AudioContext was resumed by the explicit dashboard click.
+         * Do NOT create another context and do NOT use HTMLAudioElement.
          */
-        clapAudio.pause();
-        clapAudio.currentTime = 0;
+        if (clapAudioContext.state !== "running") {
+            await clapAudioContext.resume();
+        }
 
-        await clapAudio.play();
+        source = clapAudioContext.createBufferSource();
+        source.buffer = clapAudioBuffer;
+        source.connect(clapAudioContext.destination);
 
         await new Promise((resolve, reject) => {
 
             let settled = false;
 
-            const cleanup = () => {
-                clapAudio.removeEventListener("ended", onEnded);
-                clapAudio.removeEventListener("error", onError);
-            };
-
-            const onEnded = () => {
+            source.onended = () => {
                 if (settled) return;
                 settled = true;
-                cleanup();
                 resolve();
             };
 
-            const onError = () => {
+            try {
+                source.start(0);
+            } catch (error) {
                 if (settled) return;
                 settled = true;
-                cleanup();
-                reject(
-                    new Error(
-                        "The clap audio element reported a playback error."
-                    )
-                );
-            };
-
-            clapAudio.addEventListener("ended", onEnded);
-            clapAudio.addEventListener("error", onError);
-
-            /*
-             * If a very short/edge-case media event has already fired,
-             * don't leave the coordinator waiting forever.
-             */
-            if (clapAudio.ended) {
-                onEnded();
+                reject(error);
             }
         });
 
@@ -218,9 +234,7 @@ async function playRemoteClap(eventId) {
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({
-                    event_id: eventId
-                }),
+                body: JSON.stringify({ event_id: eventId }),
                 cache: "no-store"
             }
         );
@@ -245,12 +259,18 @@ async function playRemoteClap(eventId) {
         );
 
         /*
-         * Leave the DB event pending so the next poll can retry it.
-         * This is intentional: a failed playback must never be
-         * reported to the coordinator as successfully completed.
+         * Do NOT complete the DB event if playback failed. The event stays
+         * pending, but the next poll is throttled until the current attempt
+         * is released below. A later poll can retry it.
          */
 
     } finally {
+
+        if (source) {
+            try {
+                source.disconnect();
+            } catch (_) {}
+        }
 
         clapPlaying = false;
         pendingClapEventId = null;
@@ -263,16 +283,16 @@ async function playRemoteClap(eventId) {
 ========================================================= */
 
 async function checkForClap() {
-    if (clapPlaying) {
+
+    if (!dashboardSoundEnabled || clapPlaying) {
         return;
     }
 
     try {
+
         const response = await fetch(
-            "/api/clap/pending",
-            {
-                cache: "no-store"
-            }
+            "/api/clap/pending?v=6",
+            { cache: "no-store" }
         );
 
         if (!response.ok) {
@@ -288,11 +308,6 @@ async function checkForClap() {
 
         const eventId = Number(event.id);
 
-        /*
-         * Only events created AFTER the dashboard was explicitly armed
-         * are valid. This prevents old/stuck DB events from starting
-         * applause as soon as sound is enabled.
-         */
         if (
             !eventId ||
             eventId <= armedClapBaselineId ||
