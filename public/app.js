@@ -2,6 +2,352 @@ let currentRound = "";
 
 
 /* =========================================================
+   CLAP AUDIO
+========================================================= */
+
+/*
+ * IMPORTANT:
+ * Put the file here:
+ *
+ * public/audio/clap.mp3
+ *
+ * It will then be available at:
+ *
+ * /audio/clap.mp3
+ */
+
+const clapAudio =
+    new Audio("/audio/clap.mp3");
+
+clapAudio.preload = "auto";
+
+
+/*
+ * Clap is OFF by default.
+ *
+ * If the user previously turned it ON,
+ * remember that choice using localStorage.
+ */
+
+let clapEnabled =
+    localStorage.getItem(
+        "clapSoundEnabled"
+    ) === "true";
+
+
+/*
+ * Used to detect score changes.
+ *
+ * This remains null until the first
+ * successful leaderboard load.
+ */
+
+let previousScores = null;
+
+
+/* =========================================================
+   CLAP TOGGLE BUTTON
+========================================================= */
+
+function setupClapToggle() {
+
+    /*
+     * Find the existing clap button.
+     *
+     * This works with the button class
+     * already present in your CSS:
+     *
+     * .clap-toggle-button
+     */
+
+    const clapButton =
+        document.querySelector(
+            ".clap-toggle-button"
+        );
+
+
+    /*
+     * If the button doesn't exist on
+     * this page, simply do nothing.
+     */
+
+    if (!clapButton) {
+        return;
+    }
+
+
+    /*
+     * Prevent adding the event listener
+     * more than once.
+     */
+
+    if (
+        clapButton.dataset.clapReady === "true"
+    ) {
+        updateClapButton(
+            clapButton
+        );
+
+        return;
+    }
+
+
+    clapButton.dataset.clapReady =
+        "true";
+
+
+    /*
+     * Set the initial button state.
+     */
+
+    updateClapButton(
+        clapButton
+    );
+
+
+    /*
+     * Manual ON / OFF toggle.
+     */
+
+    clapButton.addEventListener(
+        "click",
+        async function () {
+
+            clapEnabled =
+                !clapEnabled;
+
+
+            /*
+             * Save the user's choice.
+             */
+
+            localStorage.setItem(
+                "clapSoundEnabled",
+                clapEnabled
+                    ? "true"
+                    : "false"
+            );
+
+
+            /*
+             * Update button appearance.
+             */
+
+            updateClapButton(
+                clapButton
+            );
+
+
+            /*
+             * IMPORTANT:
+             *
+             * Playing the audio here after
+             * a user click gives the browser
+             * permission to use audio.
+             *
+             * We only do this when turning ON.
+             */
+
+            if (clapEnabled) {
+
+                try {
+
+                    clapAudio.currentTime = 0;
+
+                    await clapAudio.play();
+
+                } catch (error) {
+
+                    console.error(
+                        "Unable to play clap sound:",
+                        error
+                    );
+
+                }
+
+            }
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   UPDATE CLAP BUTTON
+========================================================= */
+
+function updateClapButton(
+    button
+) {
+
+    if (clapEnabled) {
+
+        button.textContent =
+            "🔊 Clap Sound: ON";
+
+        button.classList.remove(
+            "clap-disabled"
+        );
+
+    }
+
+    else {
+
+        button.textContent =
+            "🔇 Clap Sound: OFF";
+
+        button.classList.add(
+            "clap-disabled"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   PLAY CLAP
+========================================================= */
+
+async function playClap() {
+
+    /*
+     * Never play if sound is disabled.
+     */
+
+    if (!clapEnabled) {
+        return;
+    }
+
+
+    try {
+
+        /*
+         * Restart the sound from
+         * the beginning.
+         */
+
+        clapAudio.currentTime = 0;
+
+
+        await clapAudio.play();
+
+
+    } catch (error) {
+
+        console.error(
+            "Clap audio could not be played:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   DETECT SCORE CHANGES
+========================================================= */
+
+function hasScoreChanged(
+    leaderboard
+) {
+
+    /*
+     * Create a simple snapshot:
+     *
+     * team name -> total score
+     */
+
+    const currentScores = {};
+
+
+    leaderboard.forEach(
+        (team) => {
+
+            currentScores[
+                team.team
+            ] =
+                Number(
+                    team.total_score
+                ) || 0;
+
+        }
+    );
+
+
+    /*
+     * First successful load:
+     *
+     * Store the scores but DO NOT clap.
+     */
+
+    if (
+        previousScores === null
+    ) {
+
+        previousScores =
+            currentScores;
+
+        return false;
+
+    }
+
+
+    let changed = false;
+
+
+    /*
+     * Compare current scores
+     * with the previous scores.
+     */
+
+    leaderboard.forEach(
+        (team) => {
+
+            const teamName =
+                team.team;
+
+            const oldScore =
+                Number(
+                    previousScores[
+                        teamName
+                    ]
+                ) || 0;
+
+            const newScore =
+                Number(
+                    team.total_score
+                ) || 0;
+
+
+            if (
+                oldScore !== newScore
+            ) {
+
+                changed = true;
+
+            }
+
+        }
+    );
+
+
+    /*
+     * Also store the latest scores.
+     */
+
+    previousScores =
+        currentScores;
+
+
+    return changed;
+
+}
+
+
+/* =========================================================
    REFRESH DASHBOARD
 ========================================================= */
 
@@ -35,33 +381,85 @@ async function refreshDashboard() {
             !leaderboardResponse.ok ||
             !roundResponse.ok
         ) {
+
             throw new Error(
                 "Dashboard update failed."
             );
+
         }
 
 
         const leaderboard =
             await leaderboardResponse.json();
 
+
         const roundData =
             await roundResponse.json();
 
 
-        currentRound =
+        const newRound =
             roundData.round;
 
 
-        document.getElementById(
-            "current-round"
-        ).textContent =
-            currentRound;
+        /*
+         * Check whether a score changed.
+         *
+         * This is done before rendering.
+         */
 
+        const scoreChanged =
+            hasScoreChanged(
+                leaderboard
+            );
+
+
+        /*
+         * Update current round.
+         */
+
+        currentRound =
+            newRound;
+
+
+        const currentRoundElement =
+            document.getElementById(
+                "current-round"
+            );
+
+
+        if (
+            currentRoundElement
+        ) {
+
+            currentRoundElement.textContent =
+                currentRound;
+
+        }
+
+
+        /*
+         * Render leaderboard.
+         */
 
         renderLeaderboard(
             leaderboard,
             currentRound
         );
+
+
+        /*
+         * Play one clap if a score
+         * changed and sound is ON.
+         */
+
+        if (
+            scoreChanged &&
+            clapEnabled
+        ) {
+
+            playClap();
+
+        }
 
 
     } catch (error) {
@@ -318,9 +716,6 @@ function createLeaderboardRow(
 
     /*
      * Third row
-     *
-     * Round 4 has 3 teams.
-     * Rounds 1-3 have 4 teams.
      */
 
     else {
@@ -476,6 +871,13 @@ function escapeHtml(value) {
         );
 
 }
+
+
+/* =========================================================
+   INITIALIZE CLAP CONTROL
+========================================================= */
+
+setupClapToggle();
 
 
 /* =========================================================
