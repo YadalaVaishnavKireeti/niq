@@ -224,17 +224,11 @@ function renderLeaderboard(data, currentRound) {
             4
         );
 
-    const winnerSlots =
-        [
-            ...topTeams,
-            ...Array(
-                winnerCount - topTeams.length
-            ).fill(null)
-        ];
-
+    // Use only real winner cards. Empty placeholder slots are not created,
+    // so removing a team will not leave a large artificial gap.
     const topRow =
         createLeaderboardRow(
-            winnerSlots,
+            topTeams,
             true,
             isRound4
         );
@@ -344,21 +338,21 @@ function createLeaderboardRow(
             : " leaderboard-bottom-row round-one-three-bottom-row";
     }
 
+    // Tell CSS exactly how many real cards are in this row.
+    rowClass += ` row-count-${Math.min(Math.max(teams.length, 1), 4)}`;
+
     return `
         <div class="${rowClass}">
             ${teams
                 .map(
                     (team) =>
-                        team
-                            ? createTeamCard(
-                                team,
-                                team.displayRank,
-                                isTopRow
-                            )
-                            : '<div class="leaderboard-slot-placeholder" aria-hidden="true"></div>'
+                        createTeamCard(
+                            team,
+                            team.displayRank,
+                            isTopRow
+                        )
                 )
-                .join("")
-            }
+                .join("")}
         </div>
     `;
 }

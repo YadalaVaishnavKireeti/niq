@@ -1658,3 +1658,52 @@ button {
     visibility: hidden;
     pointer-events: none;
 }
+
+/* =========================================================
+   FINAL DASHBOARD LAYOUT FIX
+   Keep the answer controls at the bottom without covering cards,
+   and let each leaderboard row adapt to the number of teams.
+========================================================= */
+
+.dashboard {
+    padding-bottom: 96px;
+}
+
+.leaderboard-row {
+    justify-content: center;
+}
+
+/* Desktop: the row width is shared only by the cards that actually exist. */
+.leaderboard-row.row-count-1 {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.leaderboard-row.row-count-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.leaderboard-row.row-count-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.leaderboard-row.row-count-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dashboard-audio-panel {
+    bottom: max(10px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 700px) {
+    .dashboard {
+        padding-bottom: 88px;
+    }
+
+    /* On phones, use two columns while still adapting the final row. */
+    .leaderboard-row.row-count-1,
+    .leaderboard-row.row-count-2,
+    .leaderboard-row.row-count-3,
+    .leaderboard-row.row-count-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
