@@ -1466,87 +1466,64 @@ button {
 ========================================================= */
 
 .dashboard-audio-panel {
-    flex: 0 0 auto;
-    width: min(900px, 94vw);
-    margin: 2px auto clamp(7px, 1vh, 12px);
-    padding: 8px 12px 9px;
-    border-radius: 14px;
-    background: rgba(255,255,255,.96);
-    box-shadow: 0 6px 18px rgba(0,0,0,.12);
-    text-align: center;
-}
-
-.dashboard-audio-title {
-    font-size: 10px;
-    font-weight: 1000;
-    letter-spacing: .12em;
-    margin-bottom: 6px;
-}
-
-.dashboard-audio-buttons {
+    position: fixed;
+    left: 50%;
+    bottom: 10px;
+    transform: translateX(-50%);
+    z-index: 1000;
     display: flex;
     justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 12px;
+    padding: 6px;
+    background: rgba(255,255,255,.96);
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.22);
 }
 
 .dashboard-audio-button {
     border: 0;
     border-radius: 999px;
-    padding: 8px 14px;
-    min-width: 145px;
-    font-size: 11px;
+    padding: 10px 22px;
+    min-width: 130px;
+    font-size: 13px;
     font-weight: 1000;
     cursor: pointer;
-    box-shadow: 0 3px 10px rgba(0,0,0,.12);
+    box-shadow: 0 3px 10px rgba(0,0,0,.14);
     transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
 }
 
 .dashboard-audio-button:hover {
     transform: translateY(-1px);
-    filter: brightness(1.04);
+    filter: brightness(1.05);
 }
 
 .dashboard-audio-button:active,
 .dashboard-audio-button.sound-playing {
-    transform: scale(.97);
-    box-shadow: 0 0 0 4px rgba(255,255,255,.55), 0 4px 14px rgba(0,0,0,.16);
+    transform: scale(.96);
+    box-shadow: 0 0 0 4px rgba(255,255,255,.6), 0 4px 14px rgba(0,0,0,.18);
 }
 
-.dashboard-audio-button.correct {
+.dashboard-audio-button.clap {
     background: #17834b;
     color: #fff;
 }
 
-.dashboard-audio-button.wrong {
+.dashboard-audio-button.oops {
     background: #c0392b;
     color: #fff;
 }
 
-.dashboard-audio-button.ready {
-    background: #d49b00;
-    color: #fff;
-}
-
-.dashboard-audio-help {
-    display: block;
-    margin-top: 5px;
-    font-size: 9px;
-    color: #58616c;
-    font-weight: 700;
-}
-
 @media (max-width: 700px) {
     .dashboard-audio-panel {
-        width: 94vw;
-        padding: 7px 8px;
+        bottom: 8px;
+        gap: 8px;
+        padding: 5px;
     }
 
     .dashboard-audio-button {
-        min-width: 0;
-        flex: 1 1 30%;
-        padding: 8px 7px;
-        font-size: 10px;
+        min-width: 110px;
+        padding: 9px 16px;
+        font-size: 12px;
     }
 
     .dashboard-audio-help {

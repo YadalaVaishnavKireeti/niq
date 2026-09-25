@@ -11,9 +11,11 @@ let previousLeaderboardSignature = "";
  */
 
 const dashboardSounds = {
-    "correct-answer": new Audio("/audio/correct-answer.mp3"),
-    "wrong-answer": new Audio("/audio/wrong-answer.mp3"),
-    "ready-ding": new Audio("/audio/ready-ding.mp3")
+    // Local clap sound already included in this project.
+    clap: new Audio("/audio/clap.mp3"),
+
+    // The exact Google sound requested for OOPS.
+    oops: new Audio("https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg")
 };
 
 Object.values(dashboardSounds).forEach((audio) => {

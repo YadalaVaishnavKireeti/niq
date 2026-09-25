@@ -40,16 +40,6 @@
         </span>
     </section>
 
-    <section class="dashboard-audio-panel" aria-label="Answer sound controls">
-        <div class="dashboard-audio-title">🎵 ANSWER SOUNDS</div>
-        <div class="dashboard-audio-buttons">
-            <button type="button" class="dashboard-audio-button correct" data-audio="correct-answer">👏 Correct Answer</button>
-            <button type="button" class="dashboard-audio-button wrong" data-audio="wrong-answer">❌ Wrong Answer</button>
-            <button type="button" class="dashboard-audio-button ready" data-audio="ready-ding">🔔 Bell / Ready</button>
-        </div>
-        <span class="dashboard-audio-help">Click a sound only when you want it. All three audio files are stored locally in this dashboard.</span>
-    </section>
-
     <section class="leaderboard-section">
         <div class="section-heading">
             <div>
@@ -62,7 +52,12 @@
             <div class="loading">Loading leaderboard...</div>
         </div>
     </section>
+
+    <section class="dashboard-audio-panel" aria-label="Answer sound controls">
+        <button type="button" class="dashboard-audio-button clap" data-audio="clap">👏 CLAP</button>
+        <button type="button" class="dashboard-audio-button oops" data-audio="oops">😬 OOPS</button>
+    </section>
 </main>
-<script src="/app.js?v=answer-audio-v1"></script>
+<script src="/app.js?v=answer-audio-v2"></script>
 </body>
 </html>
