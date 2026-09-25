@@ -52,6 +52,10 @@ class CurrentRoundUpdate(BaseModel):
     round: str
 
 
+class ClapComplete(BaseModel):
+    event_id: int = Field(ge=1)
+
+
 def get_connection():
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -93,6 +97,19 @@ def initialize_database() -> None:
             cur.execute("CREATE INDEX IF NOT EXISTS idx_scores_team ON scores(team)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_scores_round ON scores(round)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_scores_question ON scores(question)")
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS clap_events (
+                    id BIGSERIAL PRIMARY KEY,
+                    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    completed_at TIMESTAMPTZ
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_clap_events_status_created
+                ON clap_events(status, created_at, id)
+            """)
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS contest_settings (
@@ -316,6 +333,128 @@ def set_current_round(payload: CurrentRoundUpdate, x_coordinator_pin: str | None
             """, (payload.round,))
         conn.commit()
     return {"success": True, "round": payload.round}
+
+
+@app.post("/api/clap")
+def trigger_clap(x_coordinator_pin: str | None = Header(default=None)):
+    """
+    Create a one-shot clap event.
+
+    The coordinator is the only client allowed to trigger an event.
+    The public dashboard polls for pending events and acknowledges
+    the event only after the audio has finished playing.
+    """
+    verify_coordinator(x_coordinator_pin)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO clap_events (status)
+                VALUES ('pending')
+                RETURNING id, created_at
+            """)
+            row = cur.fetchone()
+        conn.commit()
+
+    return {
+        "success": True,
+        "event_id": row[0],
+        "created_at": row[1].isoformat(),
+        "status": "pending",
+    }
+
+
+@app.get("/api/clap/pending")
+def get_pending_clap():
+    """
+    Public endpoint used by the scoreboard screen.
+
+    Only the oldest pending event is returned so repeated dashboard
+    polling does not replay the same clap.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, created_at
+                FROM clap_events
+                WHERE status = 'pending'
+                ORDER BY created_at ASC, id ASC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+
+    if not row:
+        return {"event": None}
+
+    return {
+        "event": {
+            "id": row[0],
+            "created_at": row[1].isoformat(),
+        }
+    }
+
+
+@app.post("/api/clap/complete")
+def complete_clap(payload: ClapComplete):
+    """
+    The public dashboard calls this only after the audio 'ended'
+    event fires.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE clap_events
+                SET status = 'completed',
+                    completed_at = NOW()
+                WHERE id = %s
+                  AND status = 'pending'
+                RETURNING id, completed_at
+            """, (payload.event_id,))
+            row = cur.fetchone()
+        conn.commit()
+
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail="Pending clap event not found."
+        )
+
+    return {
+        "success": True,
+        "event_id": row[0],
+        "status": "completed",
+        "completed_at": row[1].isoformat(),
+    }
+
+
+@app.get("/api/clap/latest")
+def get_latest_clap(x_coordinator_pin: str | None = Header(default=None)):
+    """
+    Coordinator-only status endpoint.
+    """
+    verify_coordinator(x_coordinator_pin)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT id, status, created_at, completed_at
+                FROM clap_events
+                ORDER BY id DESC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+
+    if not row:
+        return {"event": None}
+
+    return {
+        "event": {
+            "id": row[0],
+            "status": row[1],
+            "created_at": row[2].isoformat(),
+            "completed_at": row[3].isoformat() if row[3] else None,
+        }
+    }
 
 
 @app.get("/api/export")

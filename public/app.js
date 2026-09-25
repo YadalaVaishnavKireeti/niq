@@ -1,349 +1,164 @@
 let currentRound = "";
-
-
-/* =========================================================
-   CLAP AUDIO
-========================================================= */
+let previousLeaderboardSignature = "";
 
 /*
- * IMPORTANT:
- * Put the file here:
+ * PUBLIC DASHBOARD
  *
- * public/audio/clap.mp3
- *
- * It will then be available at:
- *
- * /audio/clap.mp3
+ * Clap audio is intentionally NOT tied to score changes.
+ * A clap is only played when the coordinator manually triggers
+ * a one-shot clap event from coordinator.html.
  */
 
-const clapAudio =
-    new Audio("/audio/clap.mp3");
-
+const clapAudio = new Audio("/audio/clap.mp3");
 clapAudio.preload = "auto";
 
-
-/*
- * Clap is OFF by default.
- *
- * If the user previously turned it ON,
- * remember that choice using localStorage.
- */
-
-let clapEnabled =
-    localStorage.getItem(
-        "clapSoundEnabled"
-    ) === "true";
-
-
-/*
- * Used to detect score changes.
- *
- * This remains null until the first
- * successful leaderboard load.
- */
-
-let previousScores = null;
+let dashboardSoundEnabled = false;
+let clapPlaying = false;
+let lastCompletedClapId = 0;
+let pendingClapEventId = null;
 
 
 /* =========================================================
-   CLAP TOGGLE BUTTON
+   DASHBOARD SOUND UNLOCK
 ========================================================= */
 
-function setupClapToggle() {
+function setupDashboardSound() {
+    const button = document.getElementById("dashboard-sound-enable");
 
-    /*
-     * Find the existing clap button.
-     *
-     * This works with the button class
-     * already present in your CSS:
-     *
-     * .clap-toggle-button
-     */
-
-    const clapButton =
-        document.querySelector(
-            ".clap-toggle-button"
-        );
-
-
-    /*
-     * If the button doesn't exist on
-     * this page, simply do nothing.
-     */
-
-    if (!clapButton) {
+    if (!button) {
         return;
     }
 
+    button.addEventListener("click", async () => {
+        try {
+            clapAudio.currentTime = 0;
+            await clapAudio.play();
 
-    /*
-     * Prevent adding the event listener
-     * more than once.
-     */
+            // Stop the test playback immediately after the browser
+            // grants this page permission to use audio.
+            clapAudio.pause();
+            clapAudio.currentTime = 0;
 
-    if (
-        clapButton.dataset.clapReady === "true"
-    ) {
-        updateClapButton(
-            clapButton
-        );
+            dashboardSoundEnabled = true;
+            button.textContent = "🔊 Sound Ready";
+            button.classList.add("sound-ready");
+            button.disabled = true;
+            button.setAttribute("aria-label", "Dashboard sound is ready");
 
-        return;
-    }
+            setTimeout(() => {
+                button.classList.add("sound-ready-hidden");
+            }, 1200);
 
-
-    clapButton.dataset.clapReady =
-        "true";
-
-
-    /*
-     * Set the initial button state.
-     */
-
-    updateClapButton(
-        clapButton
-    );
-
-
-    /*
-     * Manual ON / OFF toggle.
-     */
-
-    clapButton.addEventListener(
-        "click",
-        async function () {
-
-            clapEnabled =
-                !clapEnabled;
-
-
-            /*
-             * Save the user's choice.
-             */
-
-            localStorage.setItem(
-                "clapSoundEnabled",
-                clapEnabled
-                    ? "true"
-                    : "false"
-            );
-
-
-            /*
-             * Update button appearance.
-             */
-
-            updateClapButton(
-                clapButton
-            );
-
-
-            /*
-             * IMPORTANT:
-             *
-             * Playing the audio here after
-             * a user click gives the browser
-             * permission to use audio.
-             *
-             * We only do this when turning ON.
-             */
-
-            if (clapEnabled) {
-
-                try {
-
-                    clapAudio.currentTime = 0;
-
-                    await clapAudio.play();
-
-                } catch (error) {
-
-                    console.error(
-                        "Unable to play clap sound:",
-                        error
-                    );
-
-                }
-
-            }
-
+        } catch (error) {
+            console.warn("Dashboard audio is not unlocked:", error);
+            button.textContent = "🔊 Tap to Enable Sound";
         }
-    );
-
+    });
 }
 
 
 /* =========================================================
-   UPDATE CLAP BUTTON
+   PLAY REMOTE CLAP
 ========================================================= */
 
-function updateClapButton(
-    button
-) {
-
-    if (clapEnabled) {
-
-        button.textContent =
-            "🔊 Clap Sound: ON";
-
-        button.classList.remove(
-            "clap-disabled"
-        );
-
-    }
-
-    else {
-
-        button.textContent =
-            "🔇 Clap Sound: OFF";
-
-        button.classList.add(
-            "clap-disabled"
-        );
-
-    }
-
-}
-
-
-/* =========================================================
-   PLAY CLAP
-========================================================= */
-
-async function playClap() {
-
-    /*
-     * Never play if sound is disabled.
-     */
-
-    if (!clapEnabled) {
+async function playRemoteClap(eventId) {
+    if (clapPlaying || pendingClapEventId === eventId) {
         return;
     }
 
+    if (!dashboardSoundEnabled) {
+        // Do not mark the event completed. Once the dashboard sound
+        // is enabled, the same pending event can still be played.
+        return;
+    }
+
+    clapPlaying = true;
+    pendingClapEventId = eventId;
 
     try {
-
-        /*
-         * Restart the sound from
-         * the beginning.
-         */
-
         clapAudio.currentTime = 0;
-
-
         await clapAudio.play();
 
+        /*
+         * The coordinator is switched OFF only after this event's
+         * audio has completely finished on the dashboard PC.
+         */
+        await new Promise((resolve) => {
+            const onEnded = () => {
+                clapAudio.removeEventListener("ended", onEnded);
+                resolve();
+            };
+
+            clapAudio.addEventListener("ended", onEnded, { once: true });
+
+            // Safety fallback in case a browser fails to emit "ended".
+            setTimeout(() => {
+                clapAudio.removeEventListener("ended", onEnded);
+                resolve();
+            }, Math.max(5000, (clapAudio.duration || 2) * 1000 + 1000));
+        });
+
+        await fetch("/api/clap/complete", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                event_id: eventId
+            }),
+            cache: "no-store"
+        });
+
+        lastCompletedClapId = eventId;
 
     } catch (error) {
-
-        console.error(
-            "Clap audio could not be played:",
-            error
-        );
-
+        console.warn("Remote clap could not be played:", error);
+    } finally {
+        clapPlaying = false;
+        pendingClapEventId = null;
     }
-
 }
 
 
 /* =========================================================
-   DETECT SCORE CHANGES
+   CHECK FOR COORDINATOR CLAP
 ========================================================= */
 
-function hasScoreChanged(
-    leaderboard
-) {
-
-    /*
-     * Create a simple snapshot:
-     *
-     * team name -> total score
-     */
-
-    const currentScores = {};
-
-
-    leaderboard.forEach(
-        (team) => {
-
-            currentScores[
-                team.team
-            ] =
-                Number(
-                    team.total_score
-                ) || 0;
-
-        }
-    );
-
-
-    /*
-     * First successful load:
-     *
-     * Store the scores but DO NOT clap.
-     */
-
-    if (
-        previousScores === null
-    ) {
-
-        previousScores =
-            currentScores;
-
-        return false;
-
+async function checkForClap() {
+    if (clapPlaying) {
+        return;
     }
 
-
-    let changed = false;
-
-
-    /*
-     * Compare current scores
-     * with the previous scores.
-     */
-
-    leaderboard.forEach(
-        (team) => {
-
-            const teamName =
-                team.team;
-
-            const oldScore =
-                Number(
-                    previousScores[
-                        teamName
-                    ]
-                ) || 0;
-
-            const newScore =
-                Number(
-                    team.total_score
-                ) || 0;
-
-
-            if (
-                oldScore !== newScore
-            ) {
-
-                changed = true;
-
+    try {
+        const response = await fetch(
+            "/api/clap/pending",
+            {
+                cache: "no-store"
             }
+        );
 
+        if (!response.ok) {
+            return;
         }
-    );
 
+        const data = await response.json();
+        const event = data.event;
 
-    /*
-     * Also store the latest scores.
-     */
+        if (!event) {
+            return;
+        }
 
-    previousScores =
-        currentScores;
+        const eventId = Number(event.id);
 
+        if (!eventId || eventId <= lastCompletedClapId) {
+            return;
+        }
 
-    return changed;
+        await playRemoteClap(eventId);
 
+    } catch (error) {
+        console.warn("Clap event check failed:", error);
+    }
 }
 
 
@@ -352,125 +167,57 @@ function hasScoreChanged(
 ========================================================= */
 
 async function refreshDashboard() {
-
     try {
-
         const [
             leaderboardResponse,
             roundResponse
         ] = await Promise.all([
-
             fetch(
                 "/api/leaderboard",
                 {
                     cache: "no-store"
                 }
             ),
-
             fetch(
                 "/api/current-round",
                 {
                     cache: "no-store"
                 }
             )
-
         ]);
 
-
-        if (
-            !leaderboardResponse.ok ||
-            !roundResponse.ok
-        ) {
-
-            throw new Error(
-                "Dashboard update failed."
-            );
-
+        if (!leaderboardResponse.ok || !roundResponse.ok) {
+            throw new Error("Dashboard update failed.");
         }
-
 
         const leaderboard =
             await leaderboardResponse.json();
 
-
         const roundData =
             await roundResponse.json();
 
+        const newRound = roundData.round;
 
-        const newRound =
-            roundData.round;
-
-
-        /*
-         * Check whether a score changed.
-         *
-         * This is done before rendering.
-         */
-
-        const scoreChanged =
-            hasScoreChanged(
-                leaderboard
-            );
-
-
-        /*
-         * Update current round.
-         */
-
-        currentRound =
-            newRound;
-
+        currentRound = newRound;
 
         const currentRoundElement =
-            document.getElementById(
-                "current-round"
-            );
+            document.getElementById("current-round");
 
-
-        if (
-            currentRoundElement
-        ) {
-
-            currentRoundElement.textContent =
-                currentRound;
-
+        if (currentRoundElement) {
+            currentRoundElement.textContent = currentRound;
         }
-
-
-        /*
-         * Render leaderboard.
-         */
 
         renderLeaderboard(
             leaderboard,
             currentRound
         );
 
-
-        /*
-         * Play one clap if a score
-         * changed and sound is ON.
-         */
-
-        if (
-            scoreChanged &&
-            clapEnabled
-        ) {
-
-            playClap();
-
-        }
-
-
     } catch (error) {
-
         console.error(
             "Dashboard update failed:",
             error
         );
-
     }
-
 }
 
 
@@ -478,102 +225,94 @@ async function refreshDashboard() {
    RENDER LEADERBOARD
 ========================================================= */
 
-function renderLeaderboard(
-    data,
-    currentRound
-) {
-
+function renderLeaderboard(data, currentRound) {
     const container =
-        document.getElementById(
-            "leaderboard"
-        );
-
+        document.getElementById("leaderboard");
 
     if (!data.length) {
-
         container.innerHTML = `
             <div class="empty-state">
-
                 <div>🏁</div>
-
-                <h3>
-                    Quiz hasn't started yet
-                </h3>
-
-                <p>
-                    Scores will appear here
-                    as soon as the first round begins.
-                </p>
-
+                <h3>Quiz hasn't started yet</h3>
+                <p>Scores will appear here as soon as the first round begins.</p>
             </div>
         `;
-
         return;
-
     }
 
-
-    /*
-     * =====================================================
-     * ROUND LAYOUT
-     *
-     * ROUNDS 1, 2, 3:
-     *
-     * Row 1 = 3 teams
-     * Row 2 = 4 teams
-     * Row 3 = 4 teams
-     *
-     * TOTAL = 11 TEAMS
-     *
-     *
-     * ROUND 4:
-     *
-     * Row 1 = 4 teams
-     * Row 2 = 4 teams
-     * Row 3 = 3 teams
-     *
-     * TOTAL = 11 TEAMS
-     * =====================================================
-     */
-
-
     const isRound4 =
-        currentRound.startsWith(
-            "ROUND 4:"
-        );
+        currentRound.startsWith("ROUND 4:");
 
-
-    const topCount =
-        isRound4
-            ? 4
-            : 3;
-
+    const winnerCount =
+        isRound4 ? 4 : 3;
 
     /*
-     * Top teams
+     * Positive-score teams occupy the ranked positions.
+     * Zero-score teams are deliberately not assigned ranks.
+     *
+     * The API already sorts by score and then team name, so this
+     * preserves a deterministic order among teams with equal scores.
      */
+    const positiveTeams =
+        data.filter(
+            (team) => Number(team.total_score) > 0
+        );
 
+    const zeroTeams =
+        data.filter(
+            (team) => Number(team.total_score) <= 0
+        );
+
+    const rankedTeams =
+        positiveTeams.map(
+            (team, index) => ({
+                ...team,
+                displayRank:
+                    index < winnerCount
+                        ? index + 1
+                        : null,
+                isWinner:
+                    index < winnerCount
+            })
+        );
+
+    const unrankedTeams =
+        zeroTeams.map(
+            (team) => ({
+                ...team,
+                displayRank: null,
+                isWinner: false
+            })
+        );
+
+    /*
+     * Put all teams into the same score order, while ensuring
+     * zero-score teams remain after every positive-score team.
+     */
+    const orderedTeams = [
+        ...rankedTeams,
+        ...unrankedTeams
+    ];
+
+    /*
+     * Only teams with a positive score can occupy a winner slot.
+     * This means a zero-score team can never accidentally appear
+     * as 🥇/🥈/🥉/🏅.
+     */
     const topTeams =
-        data.slice(
+        rankedTeams.slice(
             0,
-            topCount
+            winnerCount
         );
 
-
     /*
-     * Remaining teams
+     * Every other team remains visible below the winner row.
      */
-
     const remainingTeams =
-        data.slice(
-            topCount
-        );
-
-
-    /*
-     * Second row:
-     * Always 4 teams
-     */
+        [
+            ...rankedTeams.slice(winnerCount),
+            ...unrankedTeams
+        ];
 
     const secondRowTeams =
         remainingTeams.slice(
@@ -581,31 +320,25 @@ function renderLeaderboard(
             4
         );
 
-
-    /*
-     * Third row:
-     *
-     * Rounds 1-3 = 4 teams
-     * Round 4 = 3 teams
-     */
-
     const thirdRowTeams =
         remainingTeams.slice(
             4
         );
 
-
-    /*
-     * Create the three rows
-     */
+    const winnerSlots =
+        [
+            ...topTeams,
+            ...Array(
+                winnerCount - topTeams.length
+            ).fill(null)
+        ];
 
     const topRow =
         createLeaderboardRow(
-            topTeams,
+            winnerSlots,
             true,
             isRound4
         );
-
 
     const secondRow =
         createLeaderboardRow(
@@ -614,7 +347,6 @@ function renderLeaderboard(
             false
         );
 
-
     const thirdRow =
         createLeaderboardRow(
             thirdRowTeams,
@@ -622,34 +354,38 @@ function renderLeaderboard(
             isRound4
         );
 
+    const leaderboardSignature =
+        orderedTeams
+            .map(
+                (team) =>
+                    `${team.team}:${Number(team.total_score) || 0}`
+            )
+            .join("|");
 
-    /*
-     * Put all three rows into leaderboard
-     */
+    const leaderboardChanged =
+        leaderboardSignature !== previousLeaderboardSignature;
+
+    previousLeaderboardSignature =
+        leaderboardSignature;
 
     container.innerHTML = `
-
         ${topRow}
-
         ${secondRow}
-
         ${thirdRow}
-
     `;
 
-
-    /*
-     * Last updated time
-     */
+    if (leaderboardChanged) {
+        container.classList.remove("leaderboard-changed");
+        void container.offsetWidth;
+        container.classList.add("leaderboard-changed");
+    }
 
     const lastUpdated =
         document.getElementById(
             "last-updated"
         );
 
-
     if (lastUpdated) {
-
         lastUpdated.textContent =
             `Updated ${
                 new Date().toLocaleTimeString(
@@ -661,9 +397,23 @@ function renderLeaderboard(
                     }
                 )
             }`;
-
     }
 
+    /*
+     * Animate cards only when the scores/order actually change,
+     * rather than every three-second refresh.
+     */
+    if (leaderboardChanged) {
+        requestAnimationFrame(() => {
+            container
+                .querySelectorAll(".team-card")
+                .forEach((card, index) => {
+                    card.style.animationDelay =
+                        `${Math.min(index * 35, 250)}ms`;
+                    card.classList.add("scoreboard-enter");
+                });
+        });
+    }
 }
 
 
@@ -676,76 +426,42 @@ function createLeaderboardRow(
     isTopRow,
     isRound4
 ) {
-
     if (!teams.length) {
         return "";
     }
 
-
     let rowClass =
         "leaderboard-row";
 
-
-    /*
-     * First row
-     */
-
     if (isTopRow) {
-
-        rowClass +=
-            isRound4
-                ? " leaderboard-top-row round-four-row"
-                : " leaderboard-top-row round-one-three-row";
-
+        rowClass += isRound4
+            ? " leaderboard-top-row round-four-row"
+            : " leaderboard-top-row round-one-three-row";
+    } else if (teams.length === 4) {
+        rowClass += " leaderboard-four-row";
+    } else {
+        rowClass += isRound4
+            ? " leaderboard-bottom-row round-four-bottom-row"
+            : " leaderboard-bottom-row round-one-three-bottom-row";
     }
-
-
-    /*
-     * Second row
-     */
-
-    else if (
-        teams.length === 4
-    ) {
-
-        rowClass +=
-            " leaderboard-four-row";
-
-    }
-
-
-    /*
-     * Third row
-     */
-
-    else {
-
-        rowClass +=
-            isRound4
-                ? " leaderboard-bottom-row round-four-bottom-row"
-                : " leaderboard-bottom-row round-one-three-bottom-row";
-
-    }
-
 
     return `
         <div class="${rowClass}">
-
             ${teams
                 .map(
                     (team) =>
-                        createTeamCard(
-                            team,
-                            team.rank,
-                            isTopRow
-                        )
+                        team
+                            ? createTeamCard(
+                                team,
+                                team.displayRank,
+                                isTopRow
+                            )
+                            : '<div class="leaderboard-slot-placeholder" aria-hidden="true"></div>'
                 )
                 .join("")
             }
-
         </div>
     `;
-
 }
 
 
@@ -758,66 +474,51 @@ function createTeamCard(
     rank,
     isTop
 ) {
+    const isZeroScore =
+        Number(team.total_score) <= 0;
 
-    /*
-     * Team colour is based on
-     * the team's current rank.
-     */
+    const isRankedWinner =
+        Boolean(team.isWinner && rank);
 
     const colourClass =
-        `team-colour-${rank}`;
-
-
-    /*
-     * Medal / rank display
-     */
+        isRankedWinner
+            ? `team-colour-${rank}`
+            : "team-colour-unranked";
 
     let rankDisplay;
 
-
-    if (rank === 1) {
-
+    if (isRankedWinner && rank === 1) {
         rankDisplay = "🥇";
-
-    }
-
-    else if (rank === 2) {
-
+    } else if (isRankedWinner && rank === 2) {
         rankDisplay = "🥈";
-
-    }
-
-    else if (rank === 3) {
-
+    } else if (isRankedWinner && rank === 3) {
         rankDisplay = "🥉";
-
-    }
-
-    else if (rank === 4) {
-
+    } else if (isRankedWinner && rank === 4) {
         rankDisplay = "🏅";
-
+    } else {
+        rankDisplay = "—";
     }
 
-    else {
+    const winnerClass =
+        isRankedWinner
+            ? " winner-card"
+            : "";
 
-        rankDisplay =
-            `#${rank}`;
-
-    }
-
+    const zeroClass =
+        isZeroScore
+            ? " zero-score-card"
+            : "";
 
     return `
         <article
             class="
                 team-card
-                ${isTop
-                    ? "top-team-card"
-                    : "remaining-team-card"}
+                ${isTop ? "top-team-card" : "remaining-team-card"}
                 ${colourClass}
+                ${winnerClass}
+                ${zeroClass}
             "
         >
-
             <div class="team-rank">
                 ${rankDisplay}
             </div>
@@ -827,13 +528,11 @@ function createTeamCard(
             </div>
 
             <div class="team-score">
-                ${team.total_score}
+                ${Number(team.total_score) || 0}
                 <span> PTS</span>
             </div>
-
         </article>
     `;
-
 }
 
 
@@ -842,56 +541,37 @@ function createTeamCard(
 ========================================================= */
 
 function escapeHtml(value) {
-
     return String(value)
-
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
-
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
 
 /* =========================================================
-   INITIALIZE CLAP CONTROL
+   INITIALIZE
 ========================================================= */
 
-setupClapToggle();
-
-
-/* =========================================================
-   INITIAL LOAD
-========================================================= */
-
+setupDashboardSound();
 refreshDashboard();
 
-
-/* =========================================================
-   AUTO REFRESH EVERY 3 SECONDS
-========================================================= */
-
+/*
+ * Scoreboard refresh.
+ *
+ * Three seconds keeps the existing leaderboard behaviour.
+ * Clap events are checked separately every second so a remote
+ * clap reaches the screen much faster.
+ */
 setInterval(
     refreshDashboard,
     3000
 );
+
+setInterval(
+    checkForClap,
+    1000
+);
+
+checkForClap();

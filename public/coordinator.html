@@ -115,7 +115,7 @@
                     </h2>
 
                     <p class="muted">
-                        Play applause automatically after a successful score entry.
+                        Trigger one applause on the public dashboard. It never plays for add, subtract, edit, or delete actions.
                     </p>
                 </div>
 
@@ -124,7 +124,7 @@
                     id="clap-toggle"
                     class="clap-toggle-button"
                 >
-                    🔊 Clapping ON
+                    🔇 Clapping OFF
                 </button>
 
             </div>
@@ -363,20 +363,30 @@ let teams = [];
 
 let currentLiveRound = "";
 
-let clapEnabled =
-    localStorage.getItem("clapEnabled") !== "false";
+let clapBusy = false;
+let activeClapEventId = null;
 
 
 /* =========================
    CLAPPING CONTROL
+
+   This is a one-shot remote trigger.
+
+   - OFF by default
+   - Clicking the button creates one pending clap event
+     in PostgreSQL.
+   - The public dashboard receives it and plays the sound.
+   - The dashboard marks it complete only after the audio ends.
+   - Only then does this coordinator button return to OFF.
+   - Score add/subtract/edit/delete NEVER trigger audio.
 ========================= */
 
 function updateClapButton() {
 
-    if (clapEnabled) {
+    if (clapBusy) {
 
         clapToggle.textContent =
-            "🔊 Clapping ON";
+            "🔊 Clapping ON · Playing...";
 
         clapToggle.classList.add(
             "clap-enabled"
@@ -386,55 +396,163 @@ function updateClapButton() {
             "clap-disabled"
         );
 
-    } else {
+        clapToggle.disabled = true;
 
-        clapToggle.textContent =
-            "🔇 Clapping OFF";
-
-        clapToggle.classList.add(
-            "clap-disabled"
-        );
-
-        clapToggle.classList.remove(
-            "clap-enabled"
-        );
-    }
-}
-
-
-function playClap() {
-
-    if (!clapEnabled) {
         return;
     }
 
+    clapToggle.disabled = false;
+
+    clapToggle.textContent =
+        "🔇 Clapping OFF";
+
+    clapToggle.classList.add(
+        "clap-disabled"
+    );
+
+    clapToggle.classList.remove(
+        "clap-enabled"
+    );
+}
+
+
+async function triggerRemoteClap() {
+
+    if (clapBusy) {
+        return;
+    }
+
+    clapBusy = true;
+    activeClapEventId = null;
+
+    updateClapButton();
+
     try {
 
-        clapAudio.currentTime = 0;
+        const response =
+            await authorizedFetch(
+                "/api/clap",
+                {
+                    method: "POST"
+                }
+            );
 
-        const playPromise =
-            clapAudio.play();
+        const data =
+            await readJsonResponse(
+                response
+            );
 
-        if (playPromise !== undefined) {
+        if (!response.ok) {
 
-            playPromise.catch((error) => {
-
-                console.warn(
-                    "Clapping audio could not play:",
-                    error
-                );
-
-            });
-
+            throw new Error(
+                data.detail ||
+                "Unable to trigger applause."
+            );
         }
+
+        activeClapEventId =
+            Number(data.event_id);
+
+        /*
+         * Keep the button ON until the public dashboard confirms
+         * that the clap audio has completely finished.
+         */
+        updateClapButton();
+
+        await waitForClapCompletion(
+            activeClapEventId
+        );
 
     } catch (error) {
 
         console.warn(
-            "Clapping audio error:",
+            "Remote clap could not be triggered:",
             error
         );
 
+        clapBusy = false;
+        activeClapEventId = null;
+
+        updateClapButton();
+
+    }
+}
+
+
+async function waitForClapCompletion(eventId) {
+
+    const startedAt =
+        Date.now();
+
+    const timeoutMs =
+        60000;
+
+    while (
+        clapBusy &&
+        activeClapEventId === eventId &&
+        Date.now() - startedAt < timeoutMs
+    ) {
+
+        try {
+
+            const response =
+                await authorizedFetch(
+                    "/api/clap/latest"
+                );
+
+            const data =
+                await readJsonResponse(
+                    response
+                );
+
+            if (
+                response.ok &&
+                data.event &&
+                Number(data.event.id) === eventId &&
+                data.event.status === "completed"
+            ) {
+
+                clapBusy = false;
+                activeClapEventId = null;
+
+                updateClapButton();
+
+                return;
+            }
+
+        } catch (error) {
+
+            console.warn(
+                "Waiting for clap completion:",
+                error
+            );
+
+        }
+
+        await new Promise(
+            (resolve) =>
+                setTimeout(resolve, 700)
+        );
+    }
+
+    /*
+     * If the dashboard did not acknowledge within one minute,
+     * release the coordinator button so the contest console
+     * cannot become permanently locked.
+     */
+    if (
+        clapBusy &&
+        activeClapEventId === eventId
+    ) {
+
+        clapBusy = false;
+        activeClapEventId = null;
+
+        updateClapButton();
+
+        console.warn(
+            "Clap event timed out waiting for dashboard acknowledgement."
+        );
     }
 }
 
@@ -443,14 +561,11 @@ clapToggle.addEventListener(
     "click",
     () => {
 
-        clapEnabled = !clapEnabled;
-
-        localStorage.setItem(
-            "clapEnabled",
-            String(clapEnabled)
-        );
-
-        updateClapButton();
+        /*
+         * The click itself is the ONLY thing that triggers applause.
+         * There is no persistent ON mode and no local audio playback.
+         */
+        triggerRemoteClap();
 
     }
 );
@@ -735,8 +850,6 @@ scoreForm.addEventListener(
 
 
             /* PLAY APPLAUSE */
-
-            playClap();
 
 
             await refreshCoordinatorData();

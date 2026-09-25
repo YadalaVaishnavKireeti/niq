@@ -1349,3 +1349,371 @@ button {
     }
 
 }
+
+/* =========================================================
+   LIVE SCOREBOARD POLISH / FIT-TO-SCREEN
+========================================================= */
+
+/*
+ * The public scoreboard is designed as a presentation screen:
+ * on desktop/TV sizes the complete board fits inside the viewport.
+ * Phones remain naturally scrollable because readability is more
+ * important than forcing 11 cards into an unreadable tiny grid.
+ */
+
+.dashboard {
+    width: min(1700px, calc(100% - 28px));
+    height: 100dvh;
+    min-height: 0;
+    padding: clamp(8px, 1.2vh, 18px) 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.scoreboard-header {
+    flex: 0 0 auto;
+    padding: clamp(7px, 1vh, 14px) 10px;
+    min-height: clamp(72px, 11vh, 112px);
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .10);
+}
+
+.scoreboard-header h1 {
+    font-size: clamp(26px, 4vw, 52px);
+}
+
+.logo-placeholder {
+    width: clamp(85px, 9vw, 150px);
+    height: clamp(58px, 9vh, 105px);
+}
+
+.current-round {
+    flex: 0 0 auto;
+    margin: clamp(8px, 1.2vh, 16px) auto;
+    padding: clamp(7px, 1vh, 11px) clamp(14px, 2vw, 22px);
+    box-shadow: 0 7px 22px rgba(0, 0, 0, .10);
+}
+
+.leaderboard-section {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.section-heading {
+    flex: 0 0 auto;
+    margin-bottom: clamp(7px, 1vh, 13px);
+}
+
+.section-heading h2 {
+    font-size: clamp(20px, 2.2vw, 30px);
+}
+
+.leaderboard-row {
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+.leaderboard-top-row.round-one-three-row,
+.leaderboard-top-row.round-four-row {
+    margin-bottom: clamp(8px, 1.4vh, 16px);
+}
+
+.team-card {
+    min-height: 0;
+    height: 100%;
+    border-radius: clamp(11px, 1vw, 18px);
+    box-shadow:
+        0 7px 22px rgba(0, 0, 0, .12),
+        inset 0 0 0 1px rgba(255,255,255,.7);
+    transition:
+        transform .28s ease,
+        box-shadow .28s ease,
+        border-color .28s ease;
+}
+
+.top-team-card {
+    min-height: 0;
+    height: 100%;
+    padding: clamp(9px, 1.2vh, 20px) 10px;
+}
+
+.remaining-team-card {
+    min-height: 0;
+    height: 100%;
+    padding: clamp(7px, 1vh, 13px) 8px;
+}
+
+.team-rank {
+    font-size: clamp(22px, 2.6vw, 38px);
+    margin-bottom: clamp(3px, .6vh, 8px);
+}
+
+.top-team-card .team-rank {
+    font-size: clamp(28px, 3.4vw, 46px);
+}
+
+.team-name {
+    font-size: clamp(16px, 1.65vw, 24px);
+}
+
+.remaining-team-card .team-name {
+    font-size: clamp(14px, 1.35vw, 20px);
+}
+
+.team-score {
+    margin-top: clamp(4px, .8vh, 10px);
+    font-size: clamp(28px, 3vw, 46px);
+}
+
+.remaining-team-card .team-score {
+    font-size: clamp(22px, 2.2vw, 32px);
+}
+
+.team-score span {
+    font-size: clamp(8px, .7vw, 11px);
+}
+
+.team-colour-unranked {
+    background: rgba(255,255,255,.90) !important;
+    color: #111 !important;
+    border-color: rgba(0,0,0,.07);
+    opacity: .92;
+}
+
+.winner-card {
+    border: 3px solid rgba(255, 193, 7, .72);
+    box-shadow:
+        0 10px 30px rgba(0,0,0,.17),
+        0 0 0 4px rgba(255,193,7,.10);
+}
+
+.zero-score-card .team-rank {
+    color: #7a7a7a;
+}
+
+.leaderboard-changed .winner-card {
+    animation: winnerPulse .8s ease-out;
+}
+
+.scoreboard-enter {
+    animation: cardRise .52s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes cardRise {
+    from {
+        opacity: .25;
+        transform: translateY(12px) scale(.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes winnerPulse {
+    0% {
+        box-shadow:
+            0 10px 30px rgba(0,0,0,.17),
+            0 0 0 0 rgba(255,193,7,.35);
+    }
+    45% {
+        box-shadow:
+            0 14px 38px rgba(0,0,0,.20),
+            0 0 0 9px rgba(255,193,7,.12);
+    }
+    100% {
+        box-shadow:
+            0 10px 30px rgba(0,0,0,.17),
+            0 0 0 4px rgba(255,193,7,.10);
+    }
+}
+
+/* =========================================================
+   DASHBOARD SOUND UNLOCK
+========================================================= */
+
+.dashboard-sound-wrap {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 0;
+    margin: 0 auto clamp(4px, .8vh, 10px);
+}
+
+.dashboard-sound-button {
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 999px;
+    padding: 6px 12px;
+    background: rgba(255,255,255,.96);
+    color: #111;
+    font-size: 11px;
+    font-weight: 900;
+    box-shadow: 0 4px 14px rgba(0,0,0,.10);
+}
+
+.dashboard-sound-button:hover {
+    transform: translateY(-1px);
+}
+
+.dashboard-sound-button:disabled {
+    cursor: default;
+}
+
+.dashboard-sound-button.sound-ready {
+    background: #17834b;
+    color: #fff;
+    border-color: #17834b;
+}
+
+.dashboard-sound-button.sound-ready-hidden {
+    opacity: .25;
+}
+
+.dashboard-sound-help {
+    font-size: 10px;
+    color: #fff;
+    font-weight: 700;
+    opacity: .9;
+}
+
+/* =========================================================
+   SMALL / TABLET SCREENS
+========================================================= */
+
+@media (max-width: 900px) and (min-width: 701px) {
+    .dashboard {
+        width: calc(100% - 18px);
+    }
+
+    .scoreboard-header {
+        gap: 12px;
+    }
+
+    .logo-placeholder {
+        width: 105px;
+        height: 72px;
+    }
+
+    .team-name {
+        font-size: clamp(14px, 1.7vw, 19px);
+    }
+
+    .remaining-team-card .team-name {
+        font-size: clamp(13px, 1.5vw, 17px);
+    }
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 700px) {
+    .dashboard {
+        width: calc(100% - 14px);
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+        padding: 7px 0 16px;
+    }
+
+    .scoreboard-header {
+        padding: 8px 0 11px;
+        min-height: 64px;
+        gap: 6px;
+        border-radius: 10px;
+    }
+
+    .scoreboard-header h1 {
+        font-size: clamp(18px, 6vw, 27px);
+    }
+
+    .logo-placeholder {
+        width: 64px;
+        height: 48px;
+    }
+
+    .current-round {
+        margin: 8px auto;
+        padding: 7px 10px;
+        gap: 6px;
+        font-size: 10px;
+    }
+
+    .dashboard-sound-wrap {
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-sound-help {
+        display: none;
+    }
+
+    .leaderboard-section {
+        display: block;
+    }
+
+    .section-heading {
+        margin-bottom: 9px;
+    }
+
+    .leaderboard-row {
+        display: grid;
+        flex: none;
+    }
+
+    .top-team-card,
+    .remaining-team-card {
+        min-height: 105px;
+        height: auto;
+    }
+
+    .top-team-card {
+        min-height: 135px;
+    }
+
+    .team-rank {
+        font-size: 23px;
+    }
+
+    .top-team-card .team-rank {
+        font-size: 30px;
+    }
+
+    .team-name,
+    .remaining-team-card .team-name {
+        font-size: 15px;
+    }
+
+    .team-score,
+    .remaining-team-card .team-score {
+        font-size: 24px;
+    }
+}
+
+/* =========================================================
+   ACCESSIBILITY / REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}
+
+.leaderboard-slot-placeholder {
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
