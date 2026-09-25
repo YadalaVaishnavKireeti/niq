@@ -1018,63 +1018,6 @@ button {
 
 
 /* =========================================================
-   CLAPPING AUDIO CONTROL
-========================================================= */
-
-.audio-control-card {
-    padding: 22px 28px;
-}
-
-.audio-control-content {
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 25px;
-}
-
-.audio-control-content h2 {
-    margin: 6px 0 5px;
-}
-
-.audio-control-content p {
-    margin: 0;
-}
-
-.clap-toggle-button {
-    width: auto !important;
-
-    min-width: 180px;
-
-    margin-top: 0 !important;
-
-    padding: 13px 20px !important;
-
-    border-radius: 12px !important;
-
-    background:
-        #17834b !important;
-
-    color: #ffffff !important;
-
-    font-weight: 900 !important;
-
-    border: none !important;
-}
-
-.clap-toggle-button.clap-disabled {
-    background:
-        #647180 !important;
-}
-
-.clap-toggle-button:hover {
-    filter: brightness(1.06);
-}
-
-
-/* =========================================================
    TABLET
 ========================================================= */
 
@@ -1333,20 +1276,6 @@ button {
     }
 
 
-    /* -----------------------------------------------------
-       CLAPPING CONTROL
-    ----------------------------------------------------- */
-
-    .audio-control-content {
-        flex-direction: column;
-
-        align-items: stretch;
-    }
-
-
-    .clap-toggle-button {
-        width: 100% !important;
-    }
 
 }
 
@@ -1533,53 +1462,96 @@ button {
 }
 
 /* =========================================================
-   DASHBOARD SOUND UNLOCK
+   DASHBOARD ANSWER SOUNDS
 ========================================================= */
 
-.dashboard-sound-wrap {
+.dashboard-audio-panel {
     flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
-    min-height: 0;
-    margin: 0 auto clamp(4px, .8vh, 10px);
-}
-
-.dashboard-sound-button {
-    border: 1px solid rgba(0,0,0,.12);
-    border-radius: 999px;
-    padding: 6px 12px;
+    width: min(900px, 94vw);
+    margin: 2px auto clamp(7px, 1vh, 12px);
+    padding: 8px 12px 9px;
+    border-radius: 14px;
     background: rgba(255,255,255,.96);
-    color: #111;
+    box-shadow: 0 6px 18px rgba(0,0,0,.12);
+    text-align: center;
+}
+
+.dashboard-audio-title {
+    font-size: 10px;
+    font-weight: 1000;
+    letter-spacing: .12em;
+    margin-bottom: 6px;
+}
+
+.dashboard-audio-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dashboard-audio-button {
+    border: 0;
+    border-radius: 999px;
+    padding: 8px 14px;
+    min-width: 145px;
     font-size: 11px;
-    font-weight: 900;
-    box-shadow: 0 4px 14px rgba(0,0,0,.10);
+    font-weight: 1000;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,.12);
+    transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
 }
 
-.dashboard-sound-button:hover {
+.dashboard-audio-button:hover {
     transform: translateY(-1px);
+    filter: brightness(1.04);
 }
 
-.dashboard-sound-button:disabled {
-    cursor: default;
+.dashboard-audio-button:active,
+.dashboard-audio-button.sound-playing {
+    transform: scale(.97);
+    box-shadow: 0 0 0 4px rgba(255,255,255,.55), 0 4px 14px rgba(0,0,0,.16);
 }
 
-.dashboard-sound-button.sound-ready {
+.dashboard-audio-button.correct {
     background: #17834b;
     color: #fff;
-    border-color: #17834b;
 }
 
-.dashboard-sound-button.sound-ready-hidden {
-    opacity: .25;
-}
-
-.dashboard-sound-help {
-    font-size: 10px;
+.dashboard-audio-button.wrong {
+    background: #c0392b;
     color: #fff;
+}
+
+.dashboard-audio-button.ready {
+    background: #d49b00;
+    color: #fff;
+}
+
+.dashboard-audio-help {
+    display: block;
+    margin-top: 5px;
+    font-size: 9px;
+    color: #58616c;
     font-weight: 700;
-    opacity: .9;
+}
+
+@media (max-width: 700px) {
+    .dashboard-audio-panel {
+        width: 94vw;
+        padding: 7px 8px;
+    }
+
+    .dashboard-audio-button {
+        min-width: 0;
+        flex: 1 1 30%;
+        padding: 8px 7px;
+        font-size: 10px;
+    }
+
+    .dashboard-audio-help {
+        display: none;
+    }
 }
 
 /* =========================================================
@@ -1645,14 +1617,6 @@ button {
         font-size: 10px;
     }
 
-    .dashboard-sound-wrap {
-        flex-wrap: wrap;
-        margin-bottom: 8px;
-    }
-
-    .dashboard-sound-help {
-        display: none;
-    }
 
     .leaderboard-section {
         display: block;

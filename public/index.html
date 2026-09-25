@@ -40,18 +40,15 @@
         </span>
     </section>
 
-    <div class="dashboard-sound-wrap">
-        <button
-            id="dashboard-sound-enable"
-            class="dashboard-sound-button"
-            type="button"
-        >
-            🔊 Enable Dashboard Sound
-        </button>
-        <span class="dashboard-sound-help">
-            One tap is required by the browser before remote applause can play.
-        </span>
-    </div>
+    <section class="dashboard-audio-panel" aria-label="Answer sound controls">
+        <div class="dashboard-audio-title">🎵 ANSWER SOUNDS</div>
+        <div class="dashboard-audio-buttons">
+            <button type="button" class="dashboard-audio-button correct" data-audio="correct-answer">👏 Correct Answer</button>
+            <button type="button" class="dashboard-audio-button wrong" data-audio="wrong-answer">❌ Wrong Answer</button>
+            <button type="button" class="dashboard-audio-button ready" data-audio="ready-ding">🔔 Bell / Ready</button>
+        </div>
+        <span class="dashboard-audio-help">Click a sound only when you want it. All three audio files are stored locally in this dashboard.</span>
+    </section>
 
     <section class="leaderboard-section">
         <div class="section-heading">
@@ -66,6 +63,6 @@
         </div>
     </section>
 </main>
-<script src="/app.js?v=clap-v9"></script>
+<script src="/app.js?v=answer-audio-v1"></script>
 </body>
 </html>
