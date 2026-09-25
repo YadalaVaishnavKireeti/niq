@@ -146,7 +146,7 @@ function renderLeaderboard(data, currentRound) {
         isRound4 ? 4 : 3;
 
     /*
-     * Positive-score teams occupy the ranked positions.
+     * Every positive-score team occupies a ranked position.
      * Zero-score teams are deliberately not assigned ranks.
      *
      * The API already sorts by score and then team name, so this
@@ -162,16 +162,15 @@ function renderLeaderboard(data, currentRound) {
             (team) => Number(team.total_score) <= 0
         );
 
+    // Every team with a positive score gets a real position.
+    // The first 3 (or 4 in Round 4) remain the highlighted winner cards,
+    // but positions continue through the rest of the positive-score teams.
     const rankedTeams =
         positiveTeams.map(
             (team, index) => ({
                 ...team,
-                displayRank:
-                    index < winnerCount
-                        ? index + 1
-                        : null,
-                isWinner:
-                    index < winnerCount
+                displayRank: index + 1,
+                isWinner: index < winnerCount
             })
         );
 
@@ -195,8 +194,8 @@ function renderLeaderboard(data, currentRound) {
 
     /*
      * Only teams with a positive score can occupy a winner slot.
-     * This means a zero-score team can never accidentally appear
-     * as 🥇/🥈/🥉/🏅.
+     * All positive-score teams still keep their numbered position below
+     * the highlighted winner cards.
      */
     const topTeams =
         rankedTeams.slice(
@@ -349,7 +348,8 @@ function createLeaderboardRow(
                         createTeamCard(
                             team,
                             team.displayRank,
-                            isTopRow
+                            isTopRow,
+                            isRound4
                         )
                 )
                 .join("")}
@@ -365,7 +365,8 @@ function createLeaderboardRow(
 function createTeamCard(
     team,
     rank,
-    isTop
+    isTop,
+    isRound4
 ) {
     const isZeroScore =
         Number(team.total_score) <= 0;
@@ -380,14 +381,20 @@ function createTeamCard(
 
     let rankDisplay;
 
-    if (isRankedWinner && rank === 1) {
-        rankDisplay = "🥇";
-    } else if (isRankedWinner && rank === 2) {
-        rankDisplay = "🥈";
-    } else if (isRankedWinner && rank === 3) {
-        rankDisplay = "🥉";
-    } else if (isRankedWinner && rank === 4) {
-        rankDisplay = "🏅";
+    if (rank === 1) {
+        rankDisplay = "🥇 1";
+    } else if (rank === 2) {
+        rankDisplay = "🥈 2";
+    } else if (rank === 3) {
+        rankDisplay = "🥉 3";
+    } else if (rank === 4 && isRound4) {
+        // Round 4 has four highlighted medal positions.
+        rankDisplay = "🏅 4";
+    } else if (rank >= 4 && rank <= 10) {
+        // Positions 4-10 are numbered; only Round 4's 4th place gets a medal.
+        rankDisplay = `${rank}`;
+    } else if (rank > 10) {
+        rankDisplay = `#${rank}`;
     } else {
         rankDisplay = "—";
     }
