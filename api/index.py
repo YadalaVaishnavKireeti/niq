@@ -364,6 +364,35 @@ def trigger_clap(x_coordinator_pin: str | None = Header(default=None)):
     }
 
 
+@app.post("/api/clap/arm")
+def arm_dashboard_clap():
+    """
+    Arm a dashboard for a new contest session.
+
+    Any pending clap events that existed before the dashboard sound
+    was manually enabled are stale and are discarded. The returned
+    baseline_id becomes the first valid event boundary for this session.
+    This endpoint deliberately requires no coordinator PIN because it is
+    called by the public scoreboard from its explicit user gesture.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE clap_events
+                SET status = 'discarded',
+                    completed_at = NOW()
+                WHERE status = 'pending'
+            """)
+            cur.execute("SELECT COALESCE(MAX(id), 0) FROM clap_events")
+            baseline_id = int(cur.fetchone()[0])
+        conn.commit()
+
+    return {
+        "success": True,
+        "baseline_id": baseline_id,
+    }
+
+
 @app.get("/api/clap/pending")
 def get_pending_clap():
     """

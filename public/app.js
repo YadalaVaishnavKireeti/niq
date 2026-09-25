@@ -16,6 +16,7 @@ clapAudio.crossOrigin = "anonymous";
 let dashboardSoundEnabled = false;
 let clapPlaying = false;
 let lastCompletedClapId = 0;
+let armedClapBaselineId = 0;
 let pendingClapEventId = null;
 
 
@@ -74,6 +75,29 @@ function setupDashboardSound() {
 
                 clapAudio.muted = originalMuted;
                 clapAudio.volume = originalVolume;
+
+                /*
+                 * ARM the dashboard at the moment the operator explicitly
+                 * enables sound. Any clap events that existed before this
+                 * moment are stale and must NEVER play.
+                 */
+                const armResponse = await fetch(
+                    "/api/clap/arm",
+                    {
+                        method: "POST",
+                        cache: "no-store"
+                    }
+                );
+
+                if (!armResponse.ok) {
+                    throw new Error(
+                        `Dashboard sound arm failed (HTTP ${armResponse.status}).`
+                    );
+                }
+
+                const armData = await armResponse.json();
+                armedClapBaselineId = Number(armData.baseline_id) || 0;
+                lastCompletedClapId = armedClapBaselineId;
 
                 dashboardSoundEnabled = true;
 
@@ -264,7 +288,16 @@ async function checkForClap() {
 
         const eventId = Number(event.id);
 
-        if (!eventId || eventId <= lastCompletedClapId) {
+        /*
+         * Only events created AFTER the dashboard was explicitly armed
+         * are valid. This prevents old/stuck DB events from starting
+         * applause as soon as sound is enabled.
+         */
+        if (
+            !eventId ||
+            eventId <= armedClapBaselineId ||
+            eventId <= lastCompletedClapId
+        ) {
             return;
         }
 
