@@ -4,18 +4,19 @@ let previousLeaderboardSignature = "";
 /*
  * PUBLIC DASHBOARD AUDIO
  *
- * Audio is now completely local to the public dashboard. There is no
- * PostgreSQL event, coordinator polling, Web Audio unlock step, or remote
- * clap acknowledgement involved. Every sound is played only by a direct
- * button click on this page, so browser autoplay rules are satisfied.
+ * Audio is completely local to the public dashboard.
+ * There is no PostgreSQL event, coordinator polling,
+ * Web Audio unlock step, or remote clap acknowledgement.
  */
 
 const dashboardSounds = {
     // Local clap sound already included in this project.
     clap: new Audio("/audio/clap.mp3"),
 
-    // The exact Google sound requested for OOPS.
-    oops: new Audio("https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg")
+    // Exact Google sound requested for OOPS.
+    oops: new Audio(
+        "https://actions.google.com/sounds/v1/cartoon/concussive_hit_guitar_boing.ogg"
+    )
 };
 
 Object.values(dashboardSounds).forEach((audio) => {
@@ -38,28 +39,44 @@ function playDashboardSound(soundName, button) {
 
         if (playPromise && typeof playPromise.catch === "function") {
             playPromise.catch((error) => {
-                console.error("Dashboard sound could not play:", error);
+                console.error(
+                    "Dashboard sound could not play:",
+                    error
+                );
             });
         }
 
         if (button) {
             button.classList.add("sound-playing");
+
             window.setTimeout(() => {
                 button.classList.remove("sound-playing");
-            }, Math.min(Math.max((audio.duration || 0.8) * 1000, 500), 12000));
+            }, Math.min(
+                Math.max((audio.duration || 0.8) * 1000, 500),
+                12000
+            ));
         }
     } catch (error) {
-        console.error("Dashboard sound error:", error);
+        console.error(
+            "Dashboard sound error:",
+            error
+        );
     }
 }
 
 function setupDashboardAudioControls() {
-    document.querySelectorAll(".dashboard-audio-button").forEach((button) => {
-        button.addEventListener("click", () => {
-            playDashboardSound(button.dataset.audio, button);
+    document
+        .querySelectorAll(".dashboard-audio-button")
+        .forEach((button) => {
+            button.addEventListener("click", () => {
+                playDashboardSound(
+                    button.dataset.audio,
+                    button
+                );
+            });
         });
-    });
 }
+
 
 /* =========================================================
    REFRESH DASHBOARD
@@ -86,7 +103,9 @@ async function refreshDashboard() {
         ]);
 
         if (!leaderboardResponse.ok || !roundResponse.ok) {
-            throw new Error("Dashboard update failed.");
+            throw new Error(
+                "Dashboard update failed."
+            );
         }
 
         const leaderboard =
@@ -95,15 +114,20 @@ async function refreshDashboard() {
         const roundData =
             await roundResponse.json();
 
-        const newRound = roundData.round;
+        const newRound =
+            roundData.round;
 
-        currentRound = newRound;
+        currentRound =
+            newRound;
 
         const currentRoundElement =
-            document.getElementById("current-round");
+            document.getElementById(
+                "current-round"
+            );
 
         if (currentRoundElement) {
-            currentRoundElement.textContent = currentRound;
+            currentRoundElement.textContent =
+                currentRound;
         }
 
         renderLeaderboard(
@@ -124,112 +148,149 @@ async function refreshDashboard() {
    RENDER LEADERBOARD
 ========================================================= */
 
-function renderLeaderboard(data, currentRound) {
+function renderLeaderboard(
+    data,
+    currentRound
+) {
     const container =
-        document.getElementById("leaderboard");
+        document.getElementById(
+            "leaderboard"
+        );
 
     if (!data.length) {
         container.innerHTML = `
             <div class="empty-state">
                 <div>🏁</div>
-                <h3>Quiz hasn't started yet</h3>
-                <p>Scores will appear here as soon as the first round begins.</p>
+
+                <h3>
+                    ${
+                        currentRound.startsWith("ROUND 2:")
+                            ? "Finals is not ready yet"
+                            : "Quiz hasn't started yet"
+                    }
+                </h3>
+
+                <p>
+                    ${
+                        currentRound.startsWith("ROUND 2:")
+                            ? "The top two semifinal teams will appear here once they qualify."
+                            : "Scores will appear here as soon as the first round begins."
+                    }
+                </p>
             </div>
         `;
+
         return;
     }
 
-    const isRound4 =
-        currentRound.startsWith("ROUND 4:");
-
-    const winnerCount =
-        isRound4 ? 4 : 3;
+    const isFinals =
+        currentRound.startsWith(
+            "ROUND 2:"
+        );
 
     /*
-     * Every positive-score team occupies a ranked position.
-     * Zero-score teams are deliberately not assigned ranks.
+     * SEMI FINALS
      *
-     * The API already sorts by score and then team name, so this
-     * preserves a deterministic order among teams with equal scores.
+     * - Every team remains visible.
+     * - Zero/negative scores show —.
+     * - Only the top two positive scores receive
+     *   positions 1 and 2.
+     *
+     * FINALS
+     *
+     * - API returns only the two semifinal qualifiers.
+     * - Finals scores start from zero.
+     * - Only Round 2 marks are displayed.
      */
+
     const positiveTeams =
         data.filter(
-            (team) => Number(team.total_score) > 0
+            (team) =>
+                Number(team.total_score) > 0
         );
 
     const zeroTeams =
         data.filter(
-            (team) => Number(team.total_score) <= 0
+            (team) =>
+                Number(team.total_score) <= 0
         );
 
-    // Every team with a positive score gets a real position.
-    // The first 3 (or 4 in Round 4) remain the highlighted winner cards,
-    // but positions continue through the rest of the positive-score teams.
     const rankedTeams =
-        positiveTeams.map(
-            (team, index) => ({
-                ...team,
-                displayRank: index + 1,
-                isWinner: index < winnerCount
-            })
-        );
+        isFinals
+            ? data
+                .slice(0, 2)
+                .map(
+                    (team, index) => ({
+                        ...team,
+                        displayRank:
+                            index + 1,
+                        isWinner: true
+                    })
+                )
+            : positiveTeams.map(
+                (team, index) => ({
+                    ...team,
+
+                    /*
+                     * Only top two receive
+                     * an actual position.
+                     */
+                    displayRank:
+                        index < 2
+                            ? index + 1
+                            : null,
+
+                    isWinner:
+                        index < 2
+                })
+            );
 
     const unrankedTeams =
-        zeroTeams.map(
-            (team) => ({
-                ...team,
-                displayRank: null,
-                isWinner: false
-            })
-        );
+        isFinals
+            ? []
+            : zeroTeams.map(
+                (team) => ({
+                    ...team,
+                    displayRank: null,
+                    isWinner: false
+                })
+            );
 
-    /*
-     * Put all teams into the same score order, while ensuring
-     * zero-score teams remain after every positive-score team.
-     */
     const orderedTeams = [
         ...rankedTeams,
         ...unrankedTeams
     ];
 
     /*
-     * Only teams with a positive score can occupy a winner slot.
-     * All positive-score teams still keep their numbered position below
-     * the highlighted winner cards.
+     * The first row is reserved for the
+     * two semifinal/final positions.
      */
     const topTeams =
-        rankedTeams.slice(
-            0,
-            winnerCount
-        );
+        rankedTeams.slice(0, 2);
 
     /*
-     * Every other team remains visible below the winner row.
+     * Remaining semifinal teams are displayed
+     * without ranking positions.
      */
     const remainingTeams =
-        [
-            ...rankedTeams.slice(winnerCount),
-            ...unrankedTeams
-        ];
+        isFinals
+            ? []
+            : [
+                ...rankedTeams.slice(2),
+                ...unrankedTeams
+            ];
 
     const secondRowTeams =
-        remainingTeams.slice(
-            0,
-            4
-        );
+        remainingTeams.slice(0, 4);
 
     const thirdRowTeams =
-        remainingTeams.slice(
-            4
-        );
+        remainingTeams.slice(4);
 
-    // Use only real winner cards. Empty placeholder slots are not created,
-    // so removing a team will not leave a large artificial gap.
     const topRow =
         createLeaderboardRow(
             topTeams,
             true,
-            isRound4
+            false
         );
 
     const secondRow =
@@ -243,19 +304,22 @@ function renderLeaderboard(data, currentRound) {
         createLeaderboardRow(
             thirdRowTeams,
             false,
-            isRound4
+            false
         );
 
     const leaderboardSignature =
         orderedTeams
             .map(
                 (team) =>
-                    `${team.team}:${Number(team.total_score) || 0}`
+                    `${team.team}:${Number(
+                        team.total_score
+                    ) || 0}`
             )
             .join("|");
 
     const leaderboardChanged =
-        leaderboardSignature !== previousLeaderboardSignature;
+        leaderboardSignature !==
+        previousLeaderboardSignature;
 
     previousLeaderboardSignature =
         leaderboardSignature;
@@ -267,9 +331,15 @@ function renderLeaderboard(data, currentRound) {
     `;
 
     if (leaderboardChanged) {
-        container.classList.remove("leaderboard-changed");
+        container.classList.remove(
+            "leaderboard-changed"
+        );
+
         void container.offsetWidth;
-        container.classList.add("leaderboard-changed");
+
+        container.classList.add(
+            "leaderboard-changed"
+        );
     }
 
     const lastUpdated =
@@ -279,31 +349,35 @@ function renderLeaderboard(data, currentRound) {
 
     if (lastUpdated) {
         lastUpdated.textContent =
-            `Updated ${
-                new Date().toLocaleTimeString(
-                    [],
-                    {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit"
-                    }
-                )
-            }`;
+            `Updated ${new Date().toLocaleTimeString(
+                [],
+                {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit"
+                }
+            )}`;
     }
 
-    /*
-     * Animate cards only when the scores/order actually change,
-     * rather than every three-second refresh.
-     */
     if (leaderboardChanged) {
         requestAnimationFrame(() => {
             container
-                .querySelectorAll(".team-card")
-                .forEach((card, index) => {
-                    card.style.animationDelay =
-                        `${Math.min(index * 35, 250)}ms`;
-                    card.classList.add("scoreboard-enter");
-                });
+                .querySelectorAll(
+                    ".team-card"
+                )
+                .forEach(
+                    (card, index) => {
+                        card.style.animationDelay =
+                            `${Math.min(
+                                index * 35,
+                                250
+                            )}ms`;
+
+                        card.classList.add(
+                            "scoreboard-enter"
+                        );
+                    }
+                );
         });
     }
 }
@@ -326,19 +400,32 @@ function createLeaderboardRow(
         "leaderboard-row";
 
     if (isTopRow) {
-        rowClass += isRound4
-            ? " leaderboard-top-row round-four-row"
-            : " leaderboard-top-row round-one-three-row";
+        rowClass =
+            isRound4
+                ? "leaderboard-top-row round-four-row"
+                : "leaderboard-top-row round-one-three-row";
     } else if (teams.length === 4) {
-        rowClass += " leaderboard-four-row";
+        rowClass +=
+            " leaderboard-four-row";
     } else {
-        rowClass += isRound4
-            ? " leaderboard-bottom-row round-four-bottom-row"
-            : " leaderboard-bottom-row round-one-three-bottom-row";
+        rowClass +=
+            isRound4
+                ? " leaderboard-bottom-row round-four-bottom-row"
+                : " leaderboard-bottom-row round-one-three-bottom-row";
     }
 
-    // Tell CSS exactly how many real cards are in this row.
-    rowClass += ` row-count-${Math.min(Math.max(teams.length, 1), 4)}`;
+    /*
+     * Tell CSS exactly how many real cards
+     * exist in this row.
+     */
+    rowClass +=
+        ` row-count-${Math.min(
+            Math.max(
+                teams.length,
+                1
+            ),
+            4
+        )}`;
 
     return `
         <div class="${rowClass}">
@@ -372,7 +459,10 @@ function createTeamCard(
         Number(team.total_score) <= 0;
 
     const isRankedWinner =
-        Boolean(team.isWinner && rank);
+        Boolean(
+            team.isWinner &&
+            rank
+        );
 
     const colourClass =
         isRankedWinner
@@ -382,21 +472,14 @@ function createTeamCard(
     let rankDisplay;
 
     if (rank === 1) {
-        rankDisplay = "🥇 1";
+        rankDisplay =
+            "🥇 1";
     } else if (rank === 2) {
-        rankDisplay = "🥈 2";
-    } else if (rank === 3) {
-        rankDisplay = "🥉 3";
-    } else if (rank === 4 && isRound4) {
-        // Round 4 has four highlighted medal positions.
-        rankDisplay = "🏅 4";
-    } else if (rank >= 4 && rank <= 10) {
-        // Positions 4-10 are numbered; only Round 4's 4th place gets a medal.
-        rankDisplay = `${rank}`;
-    } else if (rank > 10) {
-        rankDisplay = `#${rank}`;
+        rankDisplay =
+            "🥈 2";
     } else {
-        rankDisplay = "—";
+        rankDisplay =
+            "—";
     }
 
     const winnerClass =
@@ -413,7 +496,11 @@ function createTeamCard(
         <article
             class="
                 team-card
-                ${isTop ? "top-team-card" : "remaining-team-card"}
+                ${
+                    isTop
+                        ? "top-team-card"
+                        : "remaining-team-card"
+                }
                 ${colourClass}
                 ${winnerClass}
                 ${zeroClass}
@@ -442,11 +529,26 @@ function createTeamCard(
 
 function escapeHtml(value) {
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 }
 
 
@@ -455,6 +557,7 @@ function escapeHtml(value) {
 ========================================================= */
 
 setupDashboardAudioControls();
+
 refreshDashboard();
 
 /*

@@ -726,11 +726,65 @@ async function refreshCoordinatorData() {
         currentLiveRound;
 
 
+    await refreshEligibleTeams();
+
+
     await Promise.all([
         loadRecentEntries(),
         loadTeamTotals()
     ]);
 
+}
+
+
+/* =========================
+   ELIGIBLE TEAMS
+========================= */
+
+async function refreshEligibleTeams() {
+
+    let eligibleTeams = teams;
+
+
+    if (currentLiveRound === "ROUND 2: FINALS") {
+
+        const response =
+            await authorizedFetch(
+                "/api/qualified-teams"
+            );
+
+
+        const data =
+            await readJsonResponse(
+                response
+            );
+
+
+        if (!response.ok) {
+            throw new Error(
+                data.detail ||
+                "Unable to load semifinal qualifiers."
+            );
+        }
+
+
+        eligibleTeams = data.teams || [];
+    }
+
+
+    populateSelect(
+        teamSelect,
+        eligibleTeams
+    );
+
+
+    teamSelect.disabled = eligibleTeams.length === 0;
+
+
+    if (currentLiveRound === "ROUND 2: FINALS" && !eligibleTeams.length) {
+        teamSelect.innerHTML =
+            `<option value="">No finalists yet</option>`;
+    }
 }
 
 

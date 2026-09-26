@@ -1,10 +1,9 @@
 from io import BytesIO
-from datetime import datetime
 import os
 import secrets
 
 import psycopg
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from pydantic import BaseModel, Field
@@ -22,6 +21,10 @@ ROUNDS = [
     "ROUND 1: SEMI FINALS",
     "ROUND 2: FINALS",
 ]
+
+SEMI_FINALS = ROUNDS[0]
+FINALS = ROUNDS[1]
+FINALIST_COUNT = 2
 
 
 class ScoreEntry(BaseModel):
@@ -44,10 +47,6 @@ class CurrentRoundUpdate(BaseModel):
     round: str
 
 
-class ClapComplete(BaseModel):
-    event_id: int = Field(ge=1)
-
-
 def get_connection():
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
@@ -63,6 +62,41 @@ def verify_coordinator(pin: str | None) -> None:
         raise HTTPException(status_code=401, detail="Invalid coordinator PIN.")
 
 
+def signed_score_sql(alias: str = "s") -> str:
+    return f"CASE WHEN {alias}.operation = 'subtract' THEN -{alias}.marks ELSE {alias}.marks END"
+
+
+def get_semifinal_qualifiers(cur) -> list[str]:
+    """Return exactly the current top two positive semifinal teams."""
+    cur.execute(
+        f"""
+        SELECT team, SUM({signed_score_sql()}) AS total_score
+        FROM scores s
+        WHERE s.round = %s
+        GROUP BY team
+        HAVING SUM({signed_score_sql()}) > 0
+        ORDER BY total_score DESC, team ASC
+        LIMIT %s
+        """,
+        (SEMI_FINALS, FINALIST_COUNT),
+    )
+    return [row[0] for row in cur.fetchall()]
+
+
+def ensure_finalist(cur, team: str) -> None:
+    qualifiers = get_semifinal_qualifiers(cur)
+    if team not in qualifiers:
+        if len(qualifiers) < FINALIST_COUNT:
+            raise HTTPException(
+                status_code=400,
+                detail="Finals is not ready yet. Enter positive semifinal scores for the top two teams first.",
+            )
+        raise HTTPException(
+            status_code=400,
+            detail=f"{team} is not currently one of the top {FINALIST_COUNT} semifinal qualifiers.",
+        )
+
+
 def initialize_database() -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -76,7 +110,6 @@ def initialize_database() -> None:
                 )
             """)
 
-            # Add the new fields to the existing scores table without deleting old data.
             cur.execute("ALTER TABLE scores ADD COLUMN IF NOT EXISTS question INTEGER")
             cur.execute("ALTER TABLE scores ADD COLUMN IF NOT EXISTS operation VARCHAR(10)")
             cur.execute("UPDATE scores SET question = 1 WHERE question IS NULL")
@@ -90,6 +123,7 @@ def initialize_database() -> None:
             cur.execute("CREATE INDEX IF NOT EXISTS idx_scores_round ON scores(round)")
             cur.execute("CREATE INDEX IF NOT EXISTS idx_scores_question ON scores(question)")
 
+            # Kept for backwards compatibility with older deployments.
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS clap_events (
                     id BIGSERIAL PRIMARY KEY,
@@ -128,6 +162,15 @@ def get_config(x_coordinator_pin: str | None = Header(default=None)):
     return {"teams": TEAMS, "rounds": ROUNDS, "questions": list(range(1, 13))}
 
 
+@app.get("/api/qualified-teams")
+def get_qualified_teams(x_coordinator_pin: str | None = Header(default=None)):
+    verify_coordinator(x_coordinator_pin)
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            qualifiers = get_semifinal_qualifiers(cur)
+    return {"teams": qualifiers}
+
+
 @app.post("/api/scores")
 def add_score(entry: ScoreEntry, x_coordinator_pin: str | None = Header(default=None)):
     verify_coordinator(x_coordinator_pin)
@@ -136,12 +179,16 @@ def add_score(entry: ScoreEntry, x_coordinator_pin: str | None = Header(default=
         raise HTTPException(status_code=400, detail="Invalid team.")
     if entry.round not in ROUNDS:
         raise HTTPException(status_code=400, detail="Invalid round.")
+
     operation = entry.operation.lower()
     if operation not in {"add", "subtract"}:
         raise HTTPException(status_code=400, detail="Operation must be add or subtract.")
 
     with get_connection() as conn:
         with conn.cursor() as cur:
+            if entry.round == FINALS:
+                ensure_finalist(cur, entry.team)
+
             cur.execute("""
                 INSERT INTO scores (team, round, question, marks, operation)
                 VALUES (%s, %s, %s, %s, %s)
@@ -165,17 +212,51 @@ def add_score(entry: ScoreEntry, x_coordinator_pin: str | None = Header(default=
 def get_leaderboard():
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT t.team,
-                       COALESCE(SUM(CASE WHEN s.operation = 'subtract' THEN -s.marks ELSE s.marks END), 0) AS total_score,
-                       COUNT(s.id) AS entries,
-                       MAX(s.created_at) AS last_updated
-                FROM (SELECT unnest(%s::text[]) AS team) AS t
-                LEFT JOIN scores s ON s.team = t.team
-                GROUP BY t.team
-                ORDER BY total_score DESC, t.team ASC
-            """, (TEAMS,))
-            rows = cur.fetchall()
+            cur.execute("SELECT current_round FROM contest_settings WHERE id = 1")
+            current_round_row = cur.fetchone()
+            current_round = current_round_row[0] if current_round_row else SEMI_FINALS
+
+            if current_round == FINALS:
+                qualifiers = get_semifinal_qualifiers(cur)
+                if qualifiers:
+                    cur.execute(
+                        f"""
+                        SELECT t.team,
+                               COALESCE(SUM({signed_score_sql()}), 0) AS total_score,
+                               COUNT(s.id) AS entries,
+                               MAX(s.created_at) AS last_updated
+                        FROM (SELECT unnest(%s::text[]) AS team) AS t
+                        LEFT JOIN scores s
+                          ON s.team = t.team
+                         AND s.round = %s
+                        GROUP BY t.team
+                        ORDER BY total_score DESC, t.team ASC
+                        """,
+                        (qualifiers, FINALS),
+                    )
+                    rows = cur.fetchall()
+                else:
+                    rows = []
+            else:
+                cur.execute(
+                    f"""
+                    SELECT t.team,
+                           COALESCE(SUM({signed_score_sql()}), 0) AS total_score,
+                           COUNT(s.id) AS entries,
+                           MAX(s.created_at) AS last_updated
+                    FROM (SELECT unnest(%s::text[]) AS team) AS t
+                    LEFT JOIN scores s
+                      ON s.team = t.team
+                     AND s.round = %s
+                    GROUP BY t.team
+                    ORDER BY
+                        CASE WHEN SUM({signed_score_sql()}) > 0 THEN 0 ELSE 1 END,
+                        SUM({signed_score_sql()}) DESC,
+                        t.team ASC
+                    """,
+                    (TEAMS, SEMI_FINALS),
+                )
+                rows = cur.fetchall()
 
     return [
         {
@@ -233,9 +314,16 @@ def update_score(score_id: int, entry: ScoreUpdate, x_coordinator_pin: str | Non
 
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id FROM scores WHERE id = %s", (score_id,))
-            if not cur.fetchone():
+            cur.execute("SELECT id, team, round FROM scores WHERE id = %s", (score_id,))
+            existing = cur.fetchone()
+            if not existing:
                 raise HTTPException(status_code=404, detail="Score entry not found.")
+
+            final_team = entry.team if entry.team is not None else existing[1]
+            final_round = entry.round if entry.round is not None else existing[2]
+
+            if final_round == FINALS:
+                ensure_finalist(cur, final_team)
 
             cur.execute("""
                 UPDATE scores
@@ -290,14 +378,31 @@ def get_team_totals(x_coordinator_pin: str | None = Header(default=None)):
     verify_coordinator(x_coordinator_pin)
     with get_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
+            cur.execute("SELECT current_round FROM contest_settings WHERE id = 1")
+            current_round_row = cur.fetchone()
+            current_round = current_round_row[0] if current_round_row else SEMI_FINALS
+
+            if current_round == FINALS:
+                teams = get_semifinal_qualifiers(cur)
+            else:
+                teams = TEAMS
+
+            if not teams:
+                return []
+
+            cur.execute(
+                f"""
                 SELECT t.team,
-                       COALESCE(SUM(CASE WHEN s.operation = 'subtract' THEN -s.marks ELSE s.marks END), 0) AS total_score
+                       COALESCE(SUM({signed_score_sql()}), 0) AS total_score
                 FROM (SELECT unnest(%s::text[]) AS team) AS t
-                LEFT JOIN scores s ON s.team = t.team
+                LEFT JOIN scores s
+                  ON s.team = t.team
+                 AND s.round = %s
                 GROUP BY t.team
                 ORDER BY total_score DESC, t.team ASC
-            """, (TEAMS,))
+                """,
+                (teams, current_round),
+            )
             rows = cur.fetchall()
     return [{"team": row[0], "total_score": row[1]} for row in rows]
 
@@ -316,170 +421,25 @@ def set_current_round(payload: CurrentRoundUpdate, x_coordinator_pin: str | None
     verify_coordinator(x_coordinator_pin)
     if payload.round not in ROUNDS:
         raise HTTPException(status_code=400, detail="Invalid round.")
+
     with get_connection() as conn:
         with conn.cursor() as cur:
+            if payload.round == FINALS:
+                qualifiers = get_semifinal_qualifiers(cur)
+                if len(qualifiers) < FINALIST_COUNT:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Finals cannot start until two semifinal teams have positive scores.",
+                    )
+
             cur.execute("""
                 INSERT INTO contest_settings (id, current_round)
                 VALUES (1, %s)
                 ON CONFLICT (id) DO UPDATE SET current_round = EXCLUDED.current_round
             """, (payload.round,))
         conn.commit()
+
     return {"success": True, "round": payload.round}
-
-
-@app.post("/api/clap")
-def trigger_clap(x_coordinator_pin: str | None = Header(default=None)):
-    """
-    Create a one-shot clap event.
-
-    The coordinator is the only client allowed to trigger an event.
-    The public dashboard polls for pending events and acknowledges
-    the event only after the audio has finished playing.
-    """
-    verify_coordinator(x_coordinator_pin)
-
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO clap_events (status)
-                VALUES ('pending')
-                RETURNING id, created_at
-            """)
-            row = cur.fetchone()
-        conn.commit()
-
-    return {
-        "success": True,
-        "event_id": row[0],
-        "created_at": row[1].isoformat(),
-        "status": "pending",
-    }
-
-
-@app.get("/api/clap/pending")
-def get_pending_clap(after: str | None = Query(default=None)):
-    """Atomically claim one new clap for the dashboard.
-
-    A returned event is immediately changed from pending -> playing.
-    This is critical: the dashboard polls every second, so merely returning
-    a pending row can cause the same 9-second sound to be started again and
-    again if the completion request is delayed or fails.
-    """
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            if after:
-                try:
-                    datetime.fromisoformat(after.replace("Z", "+00:00"))
-                except ValueError:
-                    raise HTTPException(status_code=400, detail="Invalid clap timestamp.")
-
-                # IMPORTANT: only pending events are ever claimable.
-                # Once an event becomes `playing`, it is never returned again.
-                # This makes a 9-second clap impossible to replay in a loop.
-                cur.execute("""
-                    WITH candidate AS (
-                        SELECT id
-                        FROM clap_events
-                        WHERE status = 'pending'
-                          AND created_at > %s::timestamptz
-                        ORDER BY created_at ASC, id ASC
-                        LIMIT 1
-                        FOR UPDATE SKIP LOCKED
-                    )
-                    UPDATE clap_events e
-                    SET status = 'playing'
-                    FROM candidate c
-                    WHERE e.id = c.id
-                    RETURNING e.id, e.created_at
-                """, (after,))
-            else:
-                cur.execute("""
-                    WITH candidate AS (
-                        SELECT id
-                        FROM clap_events
-                        WHERE status = 'pending'
-                        ORDER BY created_at ASC, id ASC
-                        LIMIT 1
-                        FOR UPDATE SKIP LOCKED
-                    )
-                    UPDATE clap_events e
-                    SET status = 'playing'
-                    FROM candidate c
-                    WHERE e.id = c.id
-                    RETURNING e.id, e.created_at
-                """)
-            row = cur.fetchone()
-        conn.commit()
-
-    if not row:
-        return {"event": None}
-
-    return {
-        "event": {
-            "id": row[0],
-            "created_at": row[1].isoformat(),
-        }
-    }
-
-
-@app.post("/api/clap/complete")
-def complete_clap(payload: ClapComplete):
-    """Mark a claimed/playing clap completed after audio playback ends."""
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE clap_events
-                SET status = 'completed',
-                    completed_at = COALESCE(completed_at, NOW())
-                WHERE id = %s
-                  AND status IN ('playing', 'completed')
-                RETURNING id, completed_at, status
-            """, (payload.event_id,))
-            row = cur.fetchone()
-        conn.commit()
-
-    if not row:
-        raise HTTPException(
-            status_code=404,
-            detail="Clap event is not currently playing."
-        )
-
-    return {
-        "success": True,
-        "event_id": row[0],
-        "status": row[2],
-        "completed_at": row[1].isoformat(),
-    }
-
-
-@app.get("/api/clap/latest")
-def get_latest_clap(x_coordinator_pin: str | None = Header(default=None)):
-    """
-    Coordinator-only status endpoint.
-    """
-    verify_coordinator(x_coordinator_pin)
-
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, status, created_at, completed_at
-                FROM clap_events
-                ORDER BY id DESC
-                LIMIT 1
-            """)
-            row = cur.fetchone()
-
-    if not row:
-        return {"event": None}
-
-    return {
-        "event": {
-            "id": row[0],
-            "status": row[1],
-            "created_at": row[2].isoformat(),
-            "completed_at": row[3].isoformat() if row[3] else None,
-        }
-    }
 
 
 @app.get("/api/export")
@@ -493,18 +453,32 @@ def export_excel(x_coordinator_pin: str | None = Header(default=None)):
             """)
             score_rows = cur.fetchall()
 
-            cur.execute("""
-                SELECT t.team,
-                       COALESCE(SUM(CASE WHEN s.operation = 'subtract' THEN -s.marks ELSE s.marks END), 0) AS total_score
-                FROM (SELECT unnest(%s::text[]) AS team) AS t
-                LEFT JOIN scores s ON s.team = t.team
-                GROUP BY t.team
-                ORDER BY total_score DESC, t.team ASC
-            """, (TEAMS,))
-            leaderboard_rows = cur.fetchall()
-
             cur.execute("SELECT current_round FROM contest_settings WHERE id = 1")
             current_round_row = cur.fetchone()
+            current_round = current_round_row[0] if current_round_row else SEMI_FINALS
+
+            if current_round == FINALS:
+                leaderboard_teams = get_semifinal_qualifiers(cur)
+            else:
+                leaderboard_teams = TEAMS
+
+            if leaderboard_teams:
+                cur.execute(
+                    f"""
+                    SELECT t.team,
+                           COALESCE(SUM({signed_score_sql()}), 0) AS total_score
+                    FROM (SELECT unnest(%s::text[]) AS team) AS t
+                    LEFT JOIN scores s
+                      ON s.team = t.team
+                     AND s.round = %s
+                    GROUP BY t.team
+                    ORDER BY total_score DESC, t.team ASC
+                    """,
+                    (leaderboard_teams, current_round),
+                )
+                leaderboard_rows = cur.fetchall()
+            else:
+                leaderboard_rows = []
 
     workbook = Workbook()
     sheet = workbook.active
@@ -515,14 +489,15 @@ def export_excel(x_coordinator_pin: str | None = Header(default=None)):
         sheet.append([row[0], row[1], row[2], row[3], row[4], row[5], signed, row[6].isoformat()])
 
     leaderboard_sheet = workbook.create_sheet("Leaderboard")
-    leaderboard_sheet.append(["Rank", "Team", "Total Score"])
+    leaderboard_sheet.append(["Rank", "Team", "Total Score", "Round"])
     for rank, row in enumerate(leaderboard_rows, start=1):
-        leaderboard_sheet.append([rank, row[0], row[1]])
+        leaderboard_sheet.append([rank, row[0], row[1], current_round])
 
     settings_sheet = workbook.create_sheet("Contest Info")
-    settings_sheet.append(["Current Round", current_round_row[0] if current_round_row else ROUNDS[0]])
+    settings_sheet.append(["Current Round", current_round])
     settings_sheet.append(["Teams", len(TEAMS)])
     settings_sheet.append(["Questions Per Round", 12])
+    settings_sheet.append(["Semifinal Qualifiers", FINALIST_COUNT])
 
     for worksheet in workbook.worksheets:
         for column in worksheet.columns:
