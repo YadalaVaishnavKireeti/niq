@@ -14,14 +14,13 @@ app = FastAPI(title="Quiz Championship API")
 TEAMS = [
     "Golconda",
     "⁠Charminar",
-    "Chowmahalla",
+    "Afzulgunj",
     "King Koti",
     "Kundanbagh",
     "⁠Falaknuma",
     "Parda Gate",
     "Salarjung",
     "Purani haweli",
-    "Lakdikapool",
 ]
 
 ROUNDS = [
